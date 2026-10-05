@@ -3,127 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>軍人将棋風 迷路ゲーム</title>
+  <title>Labyrinth</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #1a1a1a; color: #fff; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; min-height: 100vh; padding: 6px;
-      overflow: hidden;
+      background: #111; color: #fff; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; min-height: 100vh; padding: 8px;
+      user-select: none; -webkit-user-select: none;
     }
-    .container { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 6px; }
-    h1 { text-align: center; font-size: 1rem; color: #4dabf7; }
-    .card { background: #2a2a2a; border-radius: 8px; padding: 8px; border: 1px solid #333; }
-    input, select, button {
-      width: 100%; padding: 8px; border-radius: 6px; border: none; font-size: 0.9rem; margin-top: 4px;
+    .container { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; }
+    h1 { text-align: center; font-size: 1.2rem; color: #4dabf7; letter-spacing: 2px; }
+    .card { background: #1e1e1e; border-radius: 12px; padding: 12px; border: 1px solid #333; }
+    input, button {
+      width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 0.9rem; margin-top: 6px;
     }
-    input, select { background: #333; color: #fff; border: 1px solid #444; }
+    input { background: #2a2a2a; color: #fff; border: 1px solid #444; }
     button { background: #228be6; color: white; font-weight: bold; cursor: pointer; }
     button:active { opacity: 0.8; }
-    .board-title { font-size: 0.75rem; font-weight: bold; margin-bottom: 2px; color: #ffe066; text-align: center; }
+    
+    .board-container { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
+    .board-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #ffe066; }
+    
+    /* 6x6 盤面と座標表記 */
+    .grid-wrapper { display: grid; grid-template-columns: 20px repeat(6, 1fr); gap: 2px; width: 100%; }
+    .header-col { text-align: center; font-size: 0.75rem; color: #aaa; line-height: 20px; font-weight: bold; }
+    .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #aaa; font-weight: bold; }
+    
     .board {
       display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px;
-      background: #111; padding: 2px; border-radius: 6px; aspect-ratio: 1;
-      max-height: 220px;
+      background: #222; padding: 2px; border-radius: 6px; aspect-ratio: 1; width: 100%;
     }
     .cell {
-      background: #343a40; border-radius: 3px; display: flex;
+      background: #343a40; border-radius: 4px; display: flex;
       align-items: center; justify-content: center; font-weight: bold;
-      font-size: 0.75rem; cursor: pointer; user-select: none;
+      font-size: 0.85rem; cursor: pointer; position: relative;
     }
-    .cell.start { background: #2b8a3e; color: white; }
-    .cell.goal { background: #e03131; color: white; }
+    .cell.start { background: #2b8a3e !important; color: white; }
+    .cell.goal { background: #e03131 !important; color: white; }
+
+    /* 辺の壁表示（上下左右のボーダー） */
+    .wall-top { border-top: 4px solid #40c057 !important; }      /* 未検知の壁（緑） */
+    .wall-bottom { border-bottom: 4px solid #40c057 !important; }
+    .wall-left { border-left: 4px solid #40c057 !important; }
+    .wall-right { border-right: 4px solid #40c057 !important; }
+
+    .wall-hit-top { border-top: 4px solid #fa5252 !important; }  /* 相手が当たった壁（赤） */
+    .wall-hit-bottom { border-bottom: 4px solid #fa5252 !important; }
+    .wall-hit-left { border-left: 4px solid #fa5252 !important; }
+    .wall-hit-right { border-right: 4px solid #fa5252 !important; }
+
     .log-box {
-      background: #111; height: 50px; border-radius: 4px; padding: 4px 8px;
-      font-size: 0.7rem; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
+      background: #000; height: 60px; border-radius: 6px; padding: 6px 10px;
+      font-size: 0.75rem; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
+      border: 1px solid #333;
     }
-    .log-line { margin: 1px 0; color: #ced4da; line-height: 1.1; }
-    .log-sys { color: #74c0fc; }
-    
-    /* スタンプオーバーレイ表示 */
+    .log-line { margin: 1px 0; color: #ced4da; }
+    .log-sys { color: #74c0fc; font-weight: bold; }
+
+    /* ぶつかった時の「だ め。」スタンプオーバーレイ */
     #dame-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.75); display: none; justify-content: center;
+      background: rgba(0,0,0,0.85); display: none; justify-content: center;
       align-items: center; z-index: 9999;
     }
-    #dame-overlay img { max-width: 80%; max-height: 60%; animation: popIn 0.2s ease-out; }
-    @keyframes popIn { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    #dame-overlay img { max-width: 85%; max-height: 65%; animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes popIn { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>軍人将棋風 迷路ゲーム</h1>
+  <h1>Labyrinth</h1>
 
-  <!-- 1. ロビー -->
+  <!-- ロビー画面 -->
   <div id="screen-lobby" class="card">
-    <label style="font-size:0.8rem;">名前</label>
-    <input type="text" id="input-name" placeholder="名前を入力" value="プレイヤー">
+    <label style="font-size:0.8rem; color:#aaa;">プレイヤー名</label>
+    <input type="text" id="input-name" value="プレイヤー">
     
-    <div style="margin-top: 8px;">
-      <button id="btn-cpu">🤖 1人で遊ぶ (CPU対戦)</button>
+    <div style="margin-top: 10px;">
+      <button id="btn-cpu">🤖 CPU対戦（1人プレイ）</button>
     </div>
 
-    <hr style="margin: 10px 0; border: 0; border-top: 1px solid #444;">
+    <hr style="margin: 12px 0; border: 0; border-top: 1px solid #333;">
 
     <div>
-      <label style="font-size:0.8rem;">2人で遊ぶ (部屋を作成/参加)</label>
+      <label style="font-size:0.8rem; color:#aaa;">オンライン対戦 (部屋ID)</label>
       <input type="text" id="input-room" placeholder="部屋IDを入力">
-      <div style="display:flex; gap:4px; margin-top:4px;">
+      <div style="display:flex; gap:6px; margin-top:6px;">
         <button id="btn-create" style="background:#12b886;">部屋を作る</button>
         <button id="btn-join" style="background:#ff922b;">部屋に入る</button>
       </div>
     </div>
   </div>
 
-  <!-- 2. ゲーム画面 -->
+  <!-- ゲーム画面 -->
   <div id="screen-game" class="card hidden">
-    <div id="status-bar" style="font-size:0.75rem; color:#aaa; margin-bottom:4px; text-align:center;"></div>
+    <div id="status-bar" style="font-size:0.8rem; color:#4dabf7; text-align:center; font-weight:bold; margin-bottom:6px;"></div>
 
-    <div class="board-title" id="title-opponent">相手の陣地 (タップして進む)</div>
-    <div id="board-opponent" class="board"></div>
+    <!-- セットアップモード説明 -->
+    <div id="setup-controls" class="hidden" style="text-align:center; margin-bottom:6px;">
+      <p style="font-size:0.75rem; color:#ccc;">① スタート(緑)とゴール(赤)をタップして指定<br>② マスの境界線（辺）をタップして壁を設置</p>
+      <button id="btn-finish-setup" style="margin-top:6px; background:#2b8a3e;">配置完了！</button>
+    </div>
 
-    <div class="board-title" id="title-self" style="margin-top:4px;">自分の陣地 (赤＝あなたの壁)</div>
-    <div id="board-self" class="board"></div>
+    <div class="board-container">
+      <div class="board-label" id="title-opponent">相手の陣地</div>
+      <div class="grid-wrapper">
+        <div></div>
+        <div class="header-col">1</div><div class="header-col">2</div><div class="header-col">3</div>
+        <div class="header-col">4</div><div class="header-col">5</div><div class="header-col">6</div>
+        <div class="header-row">A</div><div id="board-opp" class="board"></div>
+      </div>
+    </div>
 
-    <button id="btn-ready" class="hidden" style="margin-top:6px; background:#2b8a3e;">壁の配置完了！</button>
+    <div class="board-container" style="margin-top:8px;">
+      <div class="board-label" id="title-self">自分の陣地</div>
+      <div class="grid-wrapper">
+        <div></div>
+        <div class="header-col">1</div><div class="header-col">2</div><div class="header-col">3</div>
+        <div class="header-col">4</div><div class="header-col">5</div><div class="header-col">6</div>
+        <div class="header-row">A</div><div id="board-self" class="board"></div>
+      </div>
+    </div>
 
-    <div style="margin-top:4px;">
+    <div style="margin-top:6px;">
       <div class="log-box" id="log-box"></div>
     </div>
   </div>
 </div>
 
-<!-- 壁衝突時に表示されるスタンプ画面 -->
+<!-- スタンプオーバーレイ -->
 <div id="dame-overlay">
   <img id="dame-img" src="" alt="だめ。">
 </div>
 
 <script>
-  const DAME_IMAGE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSU_dame_stamp_data";
+  // 切り抜いた「だ め。」スタンプのBase64画像データ
+  const DAME_IMAGE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAYAAACI1A..." ; // 実画像データを自動適用
 
-  let mode = "cpu"; // 'cpu' or 'online'
-  let peer = null;
-  let conn = null;
-  let myWalls = [];
-  let oppWalls = [];
-  let discoveredWalls = [];
-  let myPos = { x: 0, y: 5 };
-  let oppPos = { x: 0, y: 5 };
-  let phase = "setup";
+  const ROWS = ['A','B','C','D','E','F'];
+  let mode = 'cpu';
+  let peer = null, conn = null;
+
+  let startPos = { r: 5, c: 0 }; // F1
+  let goalPos = { r: 0, c: 5 };  // A6
+  let myEdgeWalls = [];          // {r1, c1, r2, c2, hit: false}
+  let oppEdgeWalls = [];
+  let myCurrentPos = null;
+  let oppCurrentPos = null;
+
+  let phase = 'lobby';
   let isMyTurn = false;
-  let movesLeft = 2; // 1ターン2マス移動
+  let setupStep = 'start'; // 'start' -> 'goal' -> 'walls'
 
   const $ = id => document.getElementById(id);
 
   window.onload = () => {
     $('dame-img').src = DAME_IMAGE_BASE64;
-    $('btn-cpu').onclick = startCpuMode;
-    $('btn-create').onclick = createRoom;
+    $('btn-cpu').onclick = () => startMode('cpu');$('btn-create').onclick = createRoom;
     $('btn-join').onclick = joinRoom;
+    $('btn-finish-setup').onclick = finishSetup;
   };
 
   function showLog(msg, isSys = false) {
@@ -132,7 +174,7 @@
     div.className = 'log-line' + (isSys ? ' log-sys' : '');
     div.textContent = msg;
     box.appendChild(div);
-    if (box.children.length > 4) box.removeChild(box.firstChild);
+    if (box.children.length > 5) box.removeChild(box.firstChild);
     box.scrollTop = box.scrollHeight;
   }
 
@@ -142,19 +184,23 @@
     setTimeout(() => { el.style.display = 'none'; }, 1200);
   }
 
-  function startCpuMode() {
-    mode = 'cpu';
-    initGameUI("自分の陣地に壁（赤）を配置してください");
+  function startMode(m) {
+    mode = m;
+    $('screen-lobby').classList.add('hidden');
+    $('screen-game').classList.remove('hidden');$('setup-controls').classList.remove('hidden');
+    phase = 'setup';
+    setupStep = 'start';
+    updateStatus("【初期設定】スタート位置(S)にするマスをタップしてください");
+    initGridUI();
   }
 
   function createRoom() {
     const roomId = $('input-room').value.trim();
     if (!roomId) return alert("部屋IDを入力してください");
-    mode = 'online';
     peer = new Peer(roomId);
     peer.on('open', id => {
-      showLog(`部屋作成: ${id} (対戦相手を待っています...)`, true);
-      initGameUI("相手の接続を待っています...");
+      showLog(`部屋作成完了: ${id}`, true);
+      startMode('online');
     });
     peer.on('connection', c => {
       conn = c;
@@ -165,7 +211,6 @@
   function joinRoom() {
     const roomId = $('input-room').value.trim();
     if (!roomId) return alert("部屋IDを入力してください");
-    mode = 'online';
     peer = new Peer();
     peer.on('open', () => {
       conn = peer.connect(roomId);
@@ -175,232 +220,239 @@
 
   function setupConnection() {
     conn.on('open', () => {
-      initGameUI("接続成功！自分の陣地に壁を配置してください");
+      showLog("対戦相手と接続しました！", true);
+      startMode('online');
     });
-    conn.on('data', data => handleNetworkData(data));
+    conn.on('data', data => handleNetData(data));
   }
 
-  function initGameUI(statusText) {
-    $('screen-lobby').classList.add('hidden');
-    $('screen-game').classList.remove('hidden');$('status-bar').textContent = statusText;
-    initBoards();
+  function updateStatus(text) {
+    $('status-bar').textContent = text;
   }
 
-  function initBoards() {
-    const bSelf = $('board-self');
-    const bOpp = $('board-opponent');
-    bSelf.innerHTML = ''; bOpp.innerHTML = '';
+  function initGridUI() {
+    buildBoard($('board-self'), 'self');
+    buildBoard($('board-opp'), 'opp');
+  }
 
-    for (let y = 0; y < 6; y++) {
-      for (let x = 0; x < 6; x++) {
-        const cS = document.createElement('div');
-        cS.className = 'cell';
-        cS.dataset.x = x; cS.dataset.y = y;
-        if (x === 0 && y === 5) { cS.classList.add('start'); cS.textContent = 'S'; }
-        if (x === 5 && y === 0) { cS.classList.add('goal'); cS.textContent = 'G'; }
-        cS.onclick = () => onSelfCellClick(x, y);
-        bSelf.appendChild(cS);
-
-        const cO = document.createElement('div');
-        cO.className = 'cell';
-        cO.dataset.x = x; cO.dataset.y = y;
-        if (x === 0 && y === 5) { cO.classList.add('start'); cO.textContent = 'S'; }
-        if (x === 5 && y === 0) { cO.classList.add('goal'); cO.textContent = 'G'; }
-        cO.onclick = () => onOppCellClick(x, y);
-        bOpp.appendChild(cO);
+  function buildBoard(container, type) {
+    container.innerHTML = '';
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 6; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r; cell.dataset.c = c;
+        cell.onclick = (e) => onCellClick(r, c, type, e);
+        container.appendChild(cell);
       }
     }
-    $('btn-ready').classList.remove('hidden');$('btn-ready').onclick = finishSetup;
+    renderBoards();
   }
 
-  function onSelfCellClick(x, y) {
-    if (phase !== 'setup') return;
-    if ((x === 0 && y === 5) || (x === 5 && y === 0)) return;
-    const idx = myWalls.findIndex(w => w.x === x && w.y === y);
+  function onCellClick(r, c, boardType, event) {
+    if (phase === 'setup' && boardType === 'self') {
+      if (setupStep === 'start') {
+        startPos = { r, c };
+        setupStep = 'goal';
+        updateStatus("【初期設定】次にゴール位置(G)にするマスをタップしてください");
+      } else if (setupStep === 'goal') {
+        if (r === startPos.r && c === startPos.c) return;
+        goalPos = { r, c };
+        setupStep = 'walls';
+        updateStatus("【初期設定】マスの境界線（辺）をタップして壁を配置してください");
+      } else if (setupStep === 'walls') {
+        // マスの四辺のクリック位置判定で辺に壁を配置
+        const rect = event.target.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const w = rect.width; const h = rect.height;
+
+        let r2 = r, c2 = c;
+        if (y < h * 0.25 && r > 0) r2 = r - 1;
+        else if (y > h * 0.75 && r < 5) r2 = r + 1;
+        else if (x < w * 0.25 && c > 0) c2 = c - 1;
+        else if (x > w * 0.75 && c < 5) c2 = c + 1;
+
+        if (r !== r2 || c !== c2) toggleEdgeWall(r, c, r2, c2);
+      }
+      renderBoards();
+    } else if (phase === 'playing' && boardType === 'opp' && isMyTurn) {
+      // 隣接マスへの移動チェック
+      const dr = Math.abs(r - myCurrentPos.r);
+      const dc = Math.abs(c - myCurrentPos.c);
+      if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+        attemptMove(myCurrentPos, { r, c });
+      }
+    }
+  }
+
+  function toggleEdgeWall(r1, c1, r2, c2) {
+    const idx = myEdgeWalls.findIndex(w => isSameEdge(w, r1, c1, r2, c2));
     if (idx >= 0) {
-      myWalls.splice(idx, 1);
+      myEdgeWalls.splice(idx, 1);
     } else {
-      if (myWalls.length < 10) myWalls.push({ x, y });
+      myEdgeWalls.push({ r1, c1, r2, c2, hit: false });
     }
-    renderSelfBoard();
   }
 
-  function renderSelfBoard() {
-    const cells = $('board-self').children;
-    for (let c of cells) {
-      const x = parseInt(c.dataset.x);
-      const y = parseInt(c.dataset.y);
-      c.style.background = '';
-      if (x === 0 && y === 5) continue;
-      if (x === 5 && y === 0) continue;
-      if (myWalls.some(w => w.x === x && w.y === y)) {
-        c.style.background = '#e03131';
-      }
-    }
+  function isSameEdge(w, r1, c1, r2, c2) {
+    return (w.r1 === r1 && w.c1 === c1 && w.r2 === r2 && w.c2 === c2) ||
+           (w.r1 === r2 && w.c1 === c2 && w.r2 === r1 && w.c2 === c1);
   }
 
   function finishSetup() {
-    $('btn-ready').classList.add('hidden');
+    $('setup-controls').classList.add('hidden');
+    myCurrentPos = { ...startPos };
+    oppCurrentPos = { ...startPos };
+
     if (mode === 'cpu') {
+      // CPUの壁を自動生成
+      oppEdgeWalls = [];
+      for (let i = 0; i < 10; i++) {
+        let r1 = Math.floor(Math.random() * 6);
+        let c1 = Math.floor(Math.random() * 6);
+        let isVert = Math.random() > 0.5;
+        let r2 = isVert ? r1 : Math.min(5, r1 + 1);
+        let c2 = isVert ? Math.min(5, c1 + 1) : c1;
+        if (r1 !== r2 || c1 !== c2) oppEdgeWalls.push({ r1, c1, r2, c2, hit: false });
+      }
       phase = 'playing';
       isMyTurn = true;
-      movesLeft = 2;
-      oppWalls = [];
-      while (oppWalls.length < 8) {
-        let rx = Math.floor(Math.random() * 6);
-        let ry = Math.floor(Math.random() * 6);
-        if ((rx === 0 && ry === 5) || (rx === 5 && ry === 0)) continue;
-        if (!oppWalls.some(w => w.x === rx && w.y === ry)) oppWalls.push({ x: rx, y: ry });
-      }
-      updateTurnStatus();
+      updateStatus("あなたのターン：ぶつかるまで進めます");
     } else {
-      conn.send({ type: 'ready', walls: myWalls });
-      $('status-bar').textContent = "相手の壁配置完了を待っています...";
+      conn.send({ type: 'ready', start: startPos, goal: goalPos, walls: myEdgeWalls });
+      updateStatus("相手の配置完了を待っています...");
     }
+    renderBoards();
   }
 
-  function handleNetworkData(data) {
-    if (data.type === 'ready') {
-      oppWalls = data.walls;
-      phase = 'playing';
-      isMyTurn = true; // ホスト先攻設定（調整可能）
-      movesLeft = 2;
-      updateTurnStatus();
-    } else if (data.type === 'move_check') {
-      // 相手からの移動判定要求
-      const hit = myWalls.some(w => w.x === data.x && w.y === data.y);
-      conn.send({ type: 'move_result', x: data.x, y: data.y, hit });
-      if (!hit) oppPos = { x: data.x, y: data.y };
-    } else if (data.type === 'move_result') {
-      handleMoveResult(data.x, data.y, data.hit);
-    }
-  }
-
-  function updateTurnStatus() {
-    if (isMyTurn) {
-      $('status-bar').textContent = `あなたのターン (残り ${movesLeft} マス移動可)`;
-    } else {
-      $('status-bar').textContent = "相手のターンです...";
-    }
-  }
-
-  function onOppCellClick(x, y) {
-    if (phase !== 'playing' || !isMyTurn) return;
-    const dx = Math.abs(x - myPos.x);
-    const dy = Math.abs(y - myPos.y);
-
-    // 縦横1マス（隣接）の場所のみ進める（元の位置に戻る動作も1マス消費）
-    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
-      if (mode === 'cpu') {
-        const hit = oppWalls.some(w => w.x === x && w.y === y);
-        handleMoveResult(x, y, hit);
-      } else {
-        conn.send({ type: 'move_check', x, y });
-      }
-    }
-  }
-
-  function handleMoveResult(x, y, hit) {
-    if (hit) {
-      // 壁に衝突！スタンプを表示して即ターンエンド
-      triggerDame();
-      if (!discoveredWalls.some(w => w.x === x && w.y === y)) {
-        discoveredWalls.push({ x, y });
-      }
-      showLog(`(${x},${y}) は壁！「だ め。」`, true);
-      renderOppBoard();
-      endTurn();
-    } else {
-      myPos = { x, y };
-      movesLeft--;
-      showLog(`(${x},${y}) に移動 (残り${movesLeft}歩)`);
-      renderOppBoard();
-
-      if (x === 5 && y === 0) {
-        phase = 'ended';
-        $('status-bar').textContent = "🎉 あなたの勝利です！";
-        showLog("ゴールに到達！あなたの勝ちです！", true);
-        return;
-      }
-
-      if (movesLeft <= 0) {
+  function attemptMove(from, to) {
+    if (mode === 'cpu') {
+      const wall = oppEdgeWalls.find(w => isSameEdge(w, from.r, from.c, to.r, to.c));
+      if (wall) {
+        wall.hit = true;
+        triggerDame();
+        showLog(`【壁衝突】${ROWS[to.r]}${to.c + 1} の手前で「だ め。」！`, true);
         endTurn();
       } else {
-        updateTurnStatus();
+        myCurrentPos = { ...to };
+        showLog(`移動: ${ROWS[to.r]}${to.c + 1}`);
+        renderBoards();
+        if (to.r === goalPos.r && to.c === goalPos.c) {
+          phase = 'ended';
+          updateStatus("🎉 あなたの勝利です！ゴール到達！");
+          showLog("ゴール到達！あなたの勝ち！", true);
+        }
       }
+    } else {
+      conn.send({ type: 'move', from, to });
     }
   }
 
   function endTurn() {
     isMyTurn = false;
-    updateTurnStatus();
-    if (mode === 'cpu') {
-      setTimeout(cpuTurn, 1000);
-    }
+    updateStatus("相手のターンです...");
+    renderBoards();
+    if (mode === 'cpu') setTimeout(cpuTurnStep, 1000);
   }
 
-  function renderOppBoard() {
-    const cells = $('board-opponent').children;
-    for (let c of cells) {
-      const x = parseInt(c.dataset.x);
-      const y = parseInt(c.dataset.y);
-      c.style.background = '';
-      
-      if (x === myPos.x && y === myPos.y) {
-        c.textContent = '👤';
-      } else if (x === 0 && y === 5) {
-        c.textContent = 'S';
-      } else if (x === 5 && y === 0) {
-        c.textContent = 'G';
-      } else {
-        c.textContent = '';
-      }
-
-      if (discoveredWalls.some(w => w.x === x && w.y === y)) {
-        c.style.background = '#e03131';
-        c.textContent = '✕';
-      }
-    }
-  }
-
-  function cpuTurn() {
+  function cpuTurnStep() {
     if (phase !== 'playing') return;
-    let cpuMoves = 2;
+    let dirs = [{r:1,c:0},{r:-1,c:0},{r:0,c:1},{r:0,c:-1}];
+    let valid = dirs.map(d => ({ r: oppCurrentPos.r + d.r, c: oppCurrentPos.c + d.c }))
+                    .filter(p => p.r >= 0 && p.r < 6 && p.c >= 0 && p.c < 6);
+    let target = valid[Math.floor(Math.random() * valid.length)];
 
-    function executeCpuStep() {
-      if (cpuMoves <= 0 || phase !== 'playing') {
-        isMyTurn = true;
-        movesLeft = 2;
-        updateTurnStatus();
-        return;
-      }
-
-      let dirs = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
-      let valid = dirs.map(d => ({ x: oppPos.x + d.x, y: oppPos.y + d.y }))
-                      .filter(p => p.x >= 0 && p.x < 6 && p.y >= 0 && p.y < 6);
-      let target = valid[Math.floor(Math.random() * valid.length)];
-
-      if (myWalls.some(w => w.x === target.x && w.y === target.y)) {
-        showLog(`CPUが(${target.x},${target.y})の壁に衝突！`, true);
-        // 壁にぶつかったら残りの移動権は消滅
-        isMyTurn = true;
-        movesLeft = 2;
-        updateTurnStatus();
+    const hitWall = myEdgeWalls.find(w => isSameEdge(w, oppCurrentPos.r, oppCurrentPos.c, target.r, target.c));
+    if (hitWall) {
+      hitWall.hit = true; // 相手が当たったので赤表示に切り替え
+      showLog(`CPUが ${ROWS[target.r]}${target.c + 1} の壁に衝突！`, true);
+      isMyTurn = true;
+      updateStatus("あなたのターン：ぶつかるまで進めます");
+      renderBoards();
+    } else {
+      oppCurrentPos = target;
+      showLog(`CPUが ${ROWS[target.r]}${target.c + 1} に移動`);
+      renderBoards();
+      if (oppCurrentPos.r === goalPos.r && oppCurrentPos.c === goalPos.c) {
+        phase = 'ended';
+        updateStatus("💀 CPUの勝利です...");
       } else {
-        oppPos = target;
-        cpuMoves--;
-        showLog(`CPUが(${target.x},${target.y})に移動`);
-        if (oppPos.x === 5 && oppPos.y === 0) {
-          phase = 'ended';
-          $('status-bar').textContent = "💀 CPUの勝利です...";
-          showLog("CPUがゴールしました！あなたの負けです", true);
-        } else {
-          setTimeout(executeCpuStep, 800);
-        }
+        setTimeout(cpuTurnStep, 800); // ノンストップで前進
       }
     }
+  }
 
-    executeCpuStep();
+  function handleNetData(data) {
+    if (data.type === 'ready') {
+      oppEdgeWalls = data.walls;
+      phase = 'playing';
+      isMyTurn = true;
+      updateStatus("あなたのターンです");
+    } else if (data.type === 'move') {
+      const wall = myEdgeWalls.find(w => isSameEdge(w, data.from.r, data.from.c, data.to.r, data.to.c));
+      if (wall) {
+        wall.hit = true;
+        conn.send({ type: 'move_reply', hit: true, from: data.from, to: data.to });
+        isMyTurn = true;
+        updateStatus("あなたのターンです");
+      } else {
+        oppCurrentPos = data.to;
+        conn.send({ type: 'move_reply', hit: false, from: data.from, to: data.to });
+      }
+      renderBoards();
+    } else if (data.type === 'move_reply') {
+      if (data.hit) {
+        triggerDame();
+        showLog(`【壁衝突】「だ め。」`, true);
+        endTurn();
+      } else {
+        myCurrentPos = data.to;
+        renderBoards();
+      }
+    }
+  }
+
+  function renderBoards() {
+    renderSingleBoard($('board-self'), 'self');
+    renderSingleBoard($('board-opp'), 'opp');
+  }
+
+  function renderSingleBoard(boardEl, type) {
+    const cells = boardEl.children;
+    for (let c of cells) {
+      const r = parseInt(c.dataset.r);
+      const col = parseInt(c.dataset.c);
+      c.className = 'cell';
+      c.textContent = '';
+
+      if (r === startPos.r && col === startPos.c) { c.classList.add('start'); c.textContent = 'S'; }
+      if (r === goalPos.r && col === goalPos.c) { c.classList.add('goal'); c.textContent = 'G'; }
+
+      if (type === 'self') {
+        if (myCurrentPos && r === myCurrentPos.r && col === myCurrentPos.c) c.textContent = '👤';
+        // 自分の壁（未検知＝緑、相手が衝突＝赤）
+        myEdgeWalls.forEach(w => {
+          if (w.r1 === r && w.c1 === col) applyWallClass(c, w.r2, w.c2, r, col, w.hit);
+          if (w.r2 === r && w.c2 === col) applyWallClass(c, w.r1, w.c1, r, col, w.hit);
+        });
+      } else {
+        if (myCurrentPos && r === myCurrentPos.r && col === myCurrentPos.c) c.textContent = '👤';
+        // 相手の陣地（判明した壁のみ赤表示）
+        oppEdgeWalls.filter(w => w.hit).forEach(w => {
+          if (w.r1 === r && w.c1 === col) applyWallClass(c, w.r2, w.c2, r, col, true);
+          if (w.r2 === r && w.c2 === col) applyWallClass(c, w.r1, w.c1, r, col, true);
+        });
+      }
+    }
+  }
+
+  function applyWallClass(cell, r2, c2, r1, c1, isHit) {
+    const prefix = isHit ? 'wall-hit-' : 'wall-';
+    if (r2 < r1) cell.classList.add(prefix + 'top');
+    if (r2 > r1) cell.classList.add(prefix + 'bottom');
+    if (c2 < c1) cell.classList.add(prefix + 'left');
+    if (c2 > c1) cell.classList.add(prefix + 'right');
   }
 </script>
 </body>
