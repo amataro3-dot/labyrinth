@@ -46,9 +46,6 @@
     }
 
     /* 辺の壁スタイル */
-    .wall-v { width: 4px; height: 100%; position: absolute; right: -2px; top: 0; z-index: 2; pointer-events: none; }
-    .wall-h { width: 100%; height: 4px; position: absolute; bottom: -2px; left: 0; z-index: 2; pointer-events: none; }
-    
     .wall-active-top { border-top: 4px solid #d9534f; }
     .wall-active-bottom { border-bottom: 4px solid #d9534f; }
     .wall-active-left { border-left: 4px solid #d9534f; }
@@ -235,7 +232,8 @@
   function startCpuMode() {
     mode = 'cpu';
     myName = $('input-name').value.trim() || 'プレイヤー';
-    $('screen-lobby').classList.add('hidden');$('screen-game').classList.remove('hidden');
+    $('screen-lobby').classList.add('hidden');
+    $('screen-game').classList.remove('hidden');
     initGameVariables();
     showLog("CPU対戦を開始しました。");
   }
@@ -247,17 +245,16 @@
     oppWalls = [];
     pHitWalls.clear();
     cpuHitWalls.clear();
-    myPos = { r: 5, c: 5 };
-    oppPos = { r: 0, c: 2 };
     startPos = { r: 5, c: 5 };
     goalPos = { r: 0, c: 0 };
+    myPos = { ...startPos };
+    oppPos = { ...startPos };
     myVisited = Array.from({length: 6}, () => Array(6).fill(false));
     oppVisited = Array.from({length: 6}, () => Array(6).fill(false));
-    myVisited[5][5] = true;
-    oppVisited[0][2] = true;
 
-    $('room-back-btn').classList.add('hidden');$('setup-controls').classList.remove('hidden');
-    updateStatus("【初期設定】スタート(S)とゴール(G)をタップ指定してください");
+    $('room-back-btn').classList.add('hidden');
+    $('setup-controls').classList.remove('hidden');
+    updateStatus("【初期設定】スタート(S)の位置をタップしてください");
     initGridUI();
   }
 
@@ -436,7 +433,7 @@
   function sendSpectatorComment() {
     const text = $('input-comment').value.trim();
     if (!text) return;
-    $('input-comment').value = '';
+    $('input-comment', '').value = '';
     if (isHost) broadcastMessage({ type: 'chat', name: myName, text: text });
     else hostConn.send({ type: 'comment', name: myName, text: text });
   }
@@ -478,13 +475,14 @@
     if (phase === 'setup' && boardType === 'self') {
       if (setupStep === 'start') {
         startPos = { r, c };
+        myPos = { r, c };
         setupStep = 'goal';
         updateStatus("【初期設定】ゴール(G)の位置をタップしてください");
       } else if (setupStep === 'goal') {
         if (r === startPos.r && c === startPos.c) return;
         goalPos = { r, c };
         setupStep = 'walls';
-        updateStatus("【初期設定】マスの境界線（辺）をタップして壁を最大10個まで配置してください");
+        updateStatus("【初期設定】辺をタップして壁を配置してください (最大10個)");
       } else if (setupStep === 'walls') {
         const rect = event.currentTarget.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -530,7 +528,42 @@
            (w.r1 === r2 && w.c1 === c2 && w.r2 === r1 && w.c1 === c1);
   }
 
+  // スタートからゴールへの経路が存在するかチェック（幅優先探索）
+  function checkPathExists(start, goal, walls) {
+    let visited = Array.from({length: 6}, () => Array(6).fill(false));
+    let queue = [start];
+    visited[start.r][start.c] = true;
+
+    while(queue.length > 0) {
+      let curr = queue.shift();
+      if (curr.r === goal.r && curr.c === goal.c) return true;
+
+      let dirs = [{r:1,c:0},{r:-1,c:0},{r:0,c:1},{r:0,c:-1}];
+      for(let d of dirs) {
+        let nextR = curr.r + d.r;
+        let nextC = curr.c + d.c;
+        if (nextR >= 0 && nextR < 6 && nextC >= 0 && nextC < 6) {
+          if (!visited[nextR][nextC]) {
+            // 壁があるかチェック
+            let hasWall = walls.some(w => isSameEdge(w, curr.r, curr.c, nextR, nextC));
+            if (!hasWall) {
+              visited[nextR][nextC] = true;
+              queue.push({ r: nextR, c: nextC });
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   function finishSetup() {
+     // 経路チェック
+    if (!checkPathExists(startPos, goalPos, myWalls)) {
+      alert("エラー：スタートからゴールへたどり着く経路がありません！壁の位置を調整してください。");
+      return;
+    }
+
     $('setup-controls').classList.add('hidden');
     myPos = { ...startPos };
     oppPos = { ...startPos };
@@ -539,17 +572,23 @@
 
     if (mode === 'cpu') {
       oppWalls = [];
-      while(oppWalls.length < Math.max(3, myWalls.length)) {
+      let attempts = 0;
+      while(oppWalls.length < Math.max(3, myWalls.length) && attempts < 100) {
         let r1 = Math.floor(Math.random() * 6);
         let c1 = Math.floor(Math.random() * 6);
         let dirs = [{r:1,c:0},{r:0,c:1}];
         let d = dirs[Math.floor(Math.random()*dirs.length)];
         let r2 = r1 + d.r, c2 = c1 + d.c;
-        if (r2 < 6 && c2 < 6) {     
+        if (r2 < 6 && c2 < 6) {
           if (!oppWalls.some(w => isSameEdge(w, r1, c1, r2, c2))) {
             oppWalls.push({ r1, c1, r2, c2 });
+            // CPU側も経路チェックを満たすか確認（行き止まりなら外す）
+            if (!checkPathExists(startPos, goalPos, oppWalls)) {
+              oppWalls.pop();
+            }
           }
         }
+        attempts++;
       }
       phase = 'playing';
       isMyTurn = true;
@@ -637,7 +676,8 @@
 
       if (type === 'self') {
         if (myVisited[r][col]) c.classList.add('visited');
-        if (r === myPos.r && col === myPos.c) { c.textContent = '👤'; }
+        if (phase !== 'setup' && r === myPos.r && col === myPos.c) { c.textContent = '👤'; }
+        else if (phase === 'setup' && r === startPos.r && col === startPos.c) { c.textContent = '👤'; }
         else if (!((r === startPos.r && col === startPos.c) || (r === goalPos.r && col === goalPos.c))) {
           c.classList.add('dot');
         }
