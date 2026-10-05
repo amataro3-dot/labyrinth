@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>軍人将棋風 迷路ゲーム</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -61,8 +62,20 @@
   <div id="screen-lobby" class="card">
     <label style="font-size:0.8rem;">名前</label>
     <input type="text" id="input-name" placeholder="名前を入力" value="プレイヤー">
-    <div style="margin-top: 10px;">
+    
+    <div style="margin-top: 8px;">
       <button id="btn-cpu">🤖 1人で遊ぶ (CPU対戦)</button>
+    </div>
+
+    <hr style="margin: 10px 0; border: 0; border-top: 1px solid #444;">
+
+    <div>
+      <label style="font-size:0.8rem;">2人で遊ぶ (部屋を作成/参加)</label>
+      <input type="text" id="input-room" placeholder="部屋IDを入力">
+      <div style="display:flex; gap:4px; margin-top:4px;">
+        <button id="btn-create" style="background:#12b886;">部屋を作る</button>
+        <button id="btn-join" style="background:#ff922b;">部屋に入る</button>
+      </div>
     </div>
   </div>
 
@@ -90,10 +103,11 @@
 </div>
 
 <script>
-  // 切り抜いた「だ め。」スタンプ画像データの組み込み
   const DAME_IMAGE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSU_dame_stamp_data";
 
-  let mode = "cpu";
+  let mode = "cpu"; // 'cpu' or 'online'
+  let peer = null;
+  let conn = null;
   let myWalls = [];
   let oppWalls = [];
   let discoveredWalls = [];
@@ -101,12 +115,15 @@
   let oppPos = { x: 0, y: 5 };
   let phase = "setup";
   let isMyTurn = false;
+  let movesLeft = 2; // 1ターン2マス移動
 
   const $ = id => document.getElementById(id);
 
   window.onload = () => {
     $('dame-img').src = DAME_IMAGE_BASE64;
     $('btn-cpu').onclick = startCpuMode;
+    $('btn-create').onclick = createRoom;
+    $('btn-join').onclick = joinRoom;
   };
 
   function showLog(msg, isSys = false) {
@@ -127,9 +144,45 @@
 
   function startCpuMode() {
     mode = 'cpu';
+    initGameUI("自分の陣地に壁（赤）を配置してください");
+  }
+
+  function createRoom() {
+    const roomId = $('input-room').value.trim();
+    if (!roomId) return alert("部屋IDを入力してください");
+    mode = 'online';
+    peer = new Peer(roomId);
+    peer.on('open', id => {
+      showLog(`部屋作成: ${id} (対戦相手を待っています...)`, true);
+      initGameUI("相手の接続を待っています...");
+    });
+    peer.on('connection', c => {
+      conn = c;
+      setupConnection();
+    });
+  }
+
+  function joinRoom() {
+    const roomId = $('input-room').value.trim();
+    if (!roomId) return alert("部屋IDを入力してください");
+    mode = 'online';
+    peer = new Peer();
+    peer.on('open', () => {
+      conn = peer.connect(roomId);
+      setupConnection();
+    });
+  }
+
+  function setupConnection() {
+    conn.on('open', () => {
+      initGameUI("接続成功！自分の陣地に壁を配置してください");
+    });
+    conn.on('data', data => handleNetworkData(data));
+  }
+
+  function initGameUI(statusText) {
     $('screen-lobby').classList.add('hidden');
-    $('screen-game').classList.remove('hidden');$('status-bar').textContent = "自分の陣地に壁（赤）を配置してください";
-    showLog("CPU対戦を開始します", true);
+    $('screen-game').classList.remove('hidden');$('status-bar').textContent = statusText;
     initBoards();
   }
 
@@ -157,7 +210,7 @@
         bOpp.appendChild(cO);
       }
     }
-    $('btn-ready').classList.remove('hidden');$('btn-ready').onclick = finishCpuSetup;
+    $('btn-ready').classList.remove('hidden');$('btn-ready').onclick = finishSetup;
   }
 
   function onSelfCellClick(x, y) {
@@ -186,22 +239,49 @@
     }
   }
 
-  function finishCpuSetup() {
-    phase = 'playing';
-    isMyTurn = true;
+  function finishSetup() {
     $('btn-ready').classList.add('hidden');
-
-    oppWalls = [];
-    while (oppWalls.length < 8) {
-      let rx = Math.floor(Math.random() * 6);
-      let ry = Math.floor(Math.random() * 6);
-      if ((rx === 0 && ry === 5) || (rx === 5 && ry === 0)) continue;
-      if (!oppWalls.some(w => w.x === rx && w.y === ry)) oppWalls.push({ x: rx, y: ry });
+    if (mode === 'cpu') {
+      phase = 'playing';
+      isMyTurn = true;
+      movesLeft = 2;
+      oppWalls = [];
+      while (oppWalls.length < 8) {
+        let rx = Math.floor(Math.random() * 6);
+        let ry = Math.floor(Math.random() * 6);
+        if ((rx === 0 && ry === 5) || (rx === 5 && ry === 0)) continue;
+        if (!oppWalls.some(w => w.x === rx && w.y === ry)) oppWalls.push({ x: rx, y: ry });
+      }
+      updateTurnStatus();
+    } else {
+      conn.send({ type: 'ready', walls: myWalls });
+      $('status-bar').textContent = "相手の壁配置完了を待っています...";
     }
+  }
 
-    $('status-bar').textContent = "あなたの番です。隣のマスをタップして進んでください";
-    showLog("ゲーム開始！あなたのターンです", true);
-    renderOppBoard();
+  function handleNetworkData(data) {
+    if (data.type === 'ready') {
+      oppWalls = data.walls;
+      phase = 'playing';
+      isMyTurn = true; // ホスト先攻設定（調整可能）
+      movesLeft = 2;
+      updateTurnStatus();
+    } else if (data.type === 'move_check') {
+      // 相手からの移動判定要求
+      const hit = myWalls.some(w => w.x === data.x && w.y === data.y);
+      conn.send({ type: 'move_result', x: data.x, y: data.y, hit });
+      if (!hit) oppPos = { x: data.x, y: data.y };
+    } else if (data.type === 'move_result') {
+      handleMoveResult(data.x, data.y, data.hit);
+    }
+  }
+
+  function updateTurnStatus() {
+    if (isMyTurn) {
+      $('status-bar').textContent = `あなたのターン (残り ${movesLeft} マス移動可)`;
+    } else {
+      $('status-bar').textContent = "相手のターンです...";
+    }
   }
 
   function onOppCellClick(x, y) {
@@ -209,30 +289,53 @@
     const dx = Math.abs(x - myPos.x);
     const dy = Math.abs(y - myPos.y);
 
+    // 縦横1マス（隣接）の場所のみ進める（元の位置に戻る動作も1マス消費）
     if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
-      if (oppWalls.some(w => w.x === x && w.y === y)) {
-        // スタンプを表示！
-        triggerDame();
-        if (!discoveredWalls.some(w => w.x === x && w.y === y)) {
-          discoveredWalls.push({ x, y });
-        }
-        showLog(`(${x},${y}) は壁！「だ め。」`, true);
-        renderOppBoard();
-        isMyTurn = false;
-        setTimeout(cpuTurn, 1400);
+      if (mode === 'cpu') {
+        const hit = oppWalls.some(w => w.x === x && w.y === y);
+        handleMoveResult(x, y, hit);
       } else {
-        myPos = { x, y };
-        showLog(`(${x},${y}) に移動しました`);
-        renderOppBoard();
-        if (x === 5 && y === 0) {
-          phase = 'ended';
-          $('status-bar').textContent = "🎉 あなたの勝利です！";
-          showLog("ゴールに到達！あなたの勝ちです！", true);
-        } else {
-          isMyTurn = false;
-          setTimeout(cpuTurn, 800);
-        }
+        conn.send({ type: 'move_check', x, y });
       }
+    }
+  }
+
+  function handleMoveResult(x, y, hit) {
+    if (hit) {
+      // 壁に衝突！スタンプを表示して即ターンエンド
+      triggerDame();
+      if (!discoveredWalls.some(w => w.x === x && w.y === y)) {
+        discoveredWalls.push({ x, y });
+      }
+      showLog(`(${x},${y}) は壁！「だ め。」`, true);
+      renderOppBoard();
+      endTurn();
+    } else {
+      myPos = { x, y };
+      movesLeft--;
+      showLog(`(${x},${y}) に移動 (残り${movesLeft}歩)`);
+      renderOppBoard();
+
+      if (x === 5 && y === 0) {
+        phase = 'ended';
+        $('status-bar').textContent = "🎉 あなたの勝利です！";
+        showLog("ゴールに到達！あなたの勝ちです！", true);
+        return;
+      }
+
+      if (movesLeft <= 0) {
+        endTurn();
+      } else {
+        updateTurnStatus();
+      }
+    }
+  }
+
+  function endTurn() {
+    isMyTurn = false;
+    updateTurnStatus();
+    if (mode === 'cpu') {
+      setTimeout(cpuTurn, 1000);
     }
   }
 
@@ -262,26 +365,42 @@
 
   function cpuTurn() {
     if (phase !== 'playing') return;
-    let dirs = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
-    let valid = dirs.map(d => ({ x: oppPos.x + d.x, y: oppPos.y + d.y }))
-                    .filter(p => p.x >= 0 && p.x < 6 && p.y >= 0 && p.y < 6);
-    let target = valid[Math.floor(Math.random() * valid.length)];
+    let cpuMoves = 2;
 
-    if (myWalls.some(w => w.x === target.x && w.y === target.y)) {
-      showLog(`CPUが(${target.x},${target.y})の壁に衝突！`, true);
-    } else {
-      oppPos = target;
-      showLog(`CPUが(${target.x},${target.y})に移動`);
-      if (oppPos.x === 5 && oppPos.y === 0) {
-        phase = 'ended';
-        $('status-bar').textContent = "💀 CPUの勝利です...";
-        showLog("CPUがゴールしました！あなたの負けです", true);
+    function executeCpuStep() {
+      if (cpuMoves <= 0 || phase !== 'playing') {
+        isMyTurn = true;
+        movesLeft = 2;
+        updateTurnStatus();
+        return;
+      }
+
+      let dirs = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
+      let valid = dirs.map(d => ({ x: oppPos.x + d.x, y: oppPos.y + d.y }))
+                      .filter(p => p.x >= 0 && p.x < 6 && p.y >= 0 && p.y < 6);
+      let target = valid[Math.floor(Math.random() * valid.length)];
+
+      if (myWalls.some(w => w.x === target.x && w.y === target.y)) {
+        showLog(`CPUが(${target.x},${target.y})の壁に衝突！`, true);
+        // 壁にぶつかったら残りの移動権は消滅
+        isMyTurn = true;
+        movesLeft = 2;
+        updateTurnStatus();
+      } else {
+        oppPos = target;
+        cpuMoves--;
+        showLog(`CPUが(${target.x},${target.y})に移動`);
+        if (oppPos.x === 5 && oppPos.y === 0) {
+          phase = 'ended';
+          $('status-bar').textContent = "💀 CPUの勝利です...";
+          showLog("CPUがゴールしました！あなたの負けです", true);
+        } else {
+          setTimeout(executeCpuStep, 800);
+        }
       }
     }
-    if (phase === 'playing') {
-      isMyTurn = true;
-      $('status-bar').textContent = "あなたの番です";
-    }
+
+    executeCpuStep();
   }
 </script>
 </body>
