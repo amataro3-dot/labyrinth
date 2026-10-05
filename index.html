@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Labyrinth</title>
+    <title>迷路陣 (VS CPU)</title>
     <style>
         body {
             font-family: sans-serif;
@@ -18,8 +18,7 @@
         h2 {
             margin: 5px 0 10px 0;
             font-size: 1.2rem;
-            color: #1971c2;
-            letter-spacing: 2px;
+            color: #222;
         }
         #message {
             font-size: 0.95rem;
@@ -71,6 +70,7 @@
             position: relative;
             user-select: none;
         }
+        /* マスの状態 */
         .cell.visited {
             background-color: #e6f2ff;
         }
@@ -88,6 +88,7 @@
             border-radius: 50%;
             display: block;
         }
+        /* 壁（セル境界）のスタイル */
         .wall-v {
             width: 4px;
             height: 35px;
@@ -138,7 +139,7 @@
 </head>
 <body>
 
-    <h2>Labyrinth</h2>
+    <h2>迷路陣 (VS CPU)</h2>
     <div id="message">壁を3つ配置してください (0/3)</div>
 
     <!-- 上：相手の盤面（自分が解く） -->
@@ -157,19 +158,22 @@
 
     <script>
         const SIZE = 6;
-        let gameState = 'SETTING'; 
+        let gameState = 'SETTING'; // SETTING, PLAYING, END
         let messageEl = document.getElementById('message');
         let roomBackBtn = document.getElementById('room-back-btn');
 
-        let pWalls = []; 
-        let pHitWalls = new Set(); 
-        let pPos = {r: 5, c: 5}; 
+        // プレイヤーデータ
+        let pWalls = []; // {r, c, type: 'v'|'h'}
+        let pHitWalls = new Set(); // 実際に当たった壁
+        let pPos = {r: 5, c: 5}; // スタート: F6 (index 5,5)
         let pVisited = Array.from({length: SIZE}, () => Array(SIZE).fill(false));
 
+        // CPUデータ
         let cpuWalls = [];
         let cpuHitWalls = new Set();
-        let cpuPos = {r: 0, c: 2}; 
+        let cpuPos = {r: 0, c: 2}; // スタート: A3 (index 0,2)
         let cpuVisited = Array.from({length: SIZE}, () => Array(SIZE).fill(false));
+        let cpuPathQueue = [];
 
         function initGame() {
             pWalls = [];
@@ -178,11 +182,13 @@
             pVisited = Array.from({length: SIZE}, () => Array(SIZE).fill(false));
             pVisited[5][5] = true;
 
+            // CPUのランダムな壁3つ生成
             cpuWalls = [];
             while(cpuWalls.length < 3) {
                 let r = Math.floor(Math.random() * SIZE);
                 let c = Math.floor(Math.random() * (SIZE - 1));
                 let type = Math.random() < 0.5 ? 'v' : 'h';
+                // 調整：盤面内に収める
                 if(type === 'h' && r === SIZE - 1) r = SIZE - 2;
                 if(!cpuWalls.some(w => w.r === r && w.c === c && w.type === type)) {
                     cpuWalls.push({r, c, type});
@@ -192,6 +198,7 @@
             cpuPos = {r: 0, c: 2};
             cpuVisited = Array.from({length: SIZE}, () => Array(SIZE).fill(false));
             cpuVisited[0][2] = true;
+            cpuPathQueue = [];
 
             gameState = 'SETTING';
             messageEl.textContent = "壁を3つ配置してください (0/3)";
@@ -200,14 +207,15 @@
         }
 
         function render() {
-            renderBoard('player-board', pPos, pVisited, pWalls, true, {r:5, c:5}, {r:0, c:0});
-            renderBoard('cpu-board', cpuPos, cpuVisited, cpuWalls, false, {r:0, c:2}, {r:5, c:5});
+            renderBoard('player-board', pPos, pVisited, pWalls, true, {r:5, c:5}, {r:0, c:0}); // ゴールはA1(0,0)
+            renderBoard('cpu-board', cpuPos, cpuVisited, cpuWalls, false, {r:0, c:2}, {r:5, c:5}); // ゴールはF6(5,5)
         }
 
         function renderBoard(elementId, pos, visited, walls, isPlayerBoard, startPos, goalPos) {
             const grid = document.getElementById(elementId);
             grid.innerHTML = '';
 
+            // ヘッダー行 (列番号 1~6)
             let emptyHeader = document.createElement('div');
             grid.appendChild(emptyHeader);
             for (let c = 0; c < SIZE; c++) {
@@ -220,6 +228,7 @@
             const rowLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
             for (let r = 0; r < SIZE; r++) {
+                // 行ヘッダー (A~F)
                 let rh = document.createElement('div');
                 rh.className = 'cell-header';
                 rh.textContent = rowLabels[r];
@@ -231,18 +240,21 @@
 
                     if (visited[r][c]) cell.classList.add('visited');
 
+                    // ゴール判定
                     if (r === goalPos.r && c === goalPos.c) {
                         cell.classList.add(isPlayerBoard ? 'player-goal' : 'cpu-goal');
-                        cell.textContent = isPlayerBoard ? 'G' : 'P';
+                        cell.textContent = isPlayerBoard ? 'G' : 'P'; // プレイヤー視点のゴールは左上A1、CPUは右下F6
                         if(!isPlayerBoard && r === pPos.r && c === pPos.c) cell.textContent = 'CP/P';
                     }
 
+                    // プレイヤー・CPUの位置
                     if (r === pos.r && c === pos.c) {
                         cell.textContent = isPlayerBoard ? 'P' : 'CPU';
                     } else if (!(r === goalPos.r && c === goalPos.c) && !visited[r][c]) {
                         cell.classList.add('dot');
                     }
 
+                    // 垂直壁 (右側)
                     if (c < SIZE - 1) {
                         let wallV = document.createElement('div');
                         wallV.className = 'wall-v';
@@ -252,9 +264,9 @@
                             wallV.classList.add('wall-active');
                             if (gameState === 'END') {
                                 if ((isPlayerBoard ? pHitWalls : cpuHitWalls).has(`${r},${c},v`)) {
-                                    wallV.classList.add('wall-hit');
+                                    wallV.classList.add('wall-hit'); // 当たった壁は赤
                                 } else {
-                                    wallV.classList.add('wall-miss');
+                                    wallV.classList.add('wall-miss'); // 当たらなかった壁は緑
                                 }
                             }
                         } else if (gameState === 'SETTING' && isPlayerBoard) {
@@ -267,6 +279,7 @@
                         cell.appendChild(wallV);
                     }
 
+                    // 水平壁 (下側)
                     if (r < SIZE - 1) {
                         let wallH = document.createElement('div');
                         wallH.className = 'wall-h';
@@ -276,9 +289,9 @@
                             wallH.classList.add('wall-active');
                             if (gameState === 'END') {
                                 if ((isPlayerBoard ? pHitWalls : cpuHitWalls).has(`${r},${c},h`)) {
-                                    wallH.classList.add('wall-hit');
+                                    wallH.classList.add('wall-hit'); // 当たった壁は赤
                                 } else {
-                                    wallH.classList.add('wall-miss');
+                                    wallH.classList.add('wall-miss'); // 当たらなかった壁は緑
                                 }
                             }
                         } else if (gameState === 'SETTING' && isPlayerBoard) {
@@ -318,17 +331,22 @@
             }
         }
 
+        // ターン処理（プレイヤーとCPUが交互に移動）
         function runTurn() {
             if (gameState !== 'PLAYING') return;
 
+            // 簡易的なターン進行のシミュレーション（交互に1歩進む）
             setTimeout(() => {
                 if (gameState !== 'PLAYING') return;
 
+                // プレイヤーの移動シミュレーション（上へ向かう: A1を目指す）
                 if (pPos.r > 0) {
                     let nextR = pPos.r - 1;
+                    // 壁チェック
                     let hit = cpuWalls.some(w => w.r === nextR && w.c === pPos.c && w.type === 'h');
                     if (hit) {
                         cpuHitWalls.add(`${nextR},${pPos.c},h`);
+                        // ぶつかったら別方向に曲がる簡単な処理
                         if (pPos.c < SIZE - 1) pPos.c++;
                         else if (pPos.c > 0) pPos.c--;
                     } else {
@@ -337,6 +355,7 @@
                     pVisited[pPos.r][pPos.c] = true;
                 }
 
+                // CPUの移動シミュレーション（下へ向かう: F6を目指す）
                 if (cpuPos.r < SIZE - 1) {
                     let nextR = cpuPos.r + 1;
                     let hit = pWalls.some(w => w.r === cpuPos.r && w.c === cpuPos.c && w.type === 'h');
@@ -352,6 +371,7 @@
 
                 render();
 
+                // 勝利判定
                 if (pPos.r === 0 && pPos.c === 0) {
                     endGame("🎉 双方ゴール！あなたの勝ちです！ 🎉");
                 } else if (cpuPos.r === 5 && cpuPos.c === 5) {
@@ -366,13 +386,14 @@
             gameState = 'END';
             messageEl.textContent = msg;
             roomBackBtn.style.display = 'block';
-            render();
+            render(); // 壁の色分け（赤・緑）を反映して再描画
         }
 
         function resetGame() {
             initGame();
         }
 
+        // 初期化実行
         initGame();
     </script>
 </body>
