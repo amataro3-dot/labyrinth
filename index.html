@@ -9,66 +9,66 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #111; color: #fff; display: flex; flex-direction: column;
+      background: #f4f4f9; color: #333; display: flex; flex-direction: column;
       align-items: center; justify-content: center; min-height: 100vh; padding: 8px;
       user-select: none; -webkit-user-select: none;
     }
     .container { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; }
-    h1 { text-align: center; font-size: 1.2rem; color: #4dabf7; letter-spacing: 2px; }
-    .card { background: #1e1e1e; border-radius: 12px; padding: 12px; border: 1px solid #333; }
+    h1 { text-align: center; font-size: 1.2rem; color: #1971c2; letter-spacing: 2px; }
+    .card { background: #ffffff; border-radius: 12px; padding: 12px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     input, button {
-      width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 0.9rem; margin-top: 6px;
+      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.9rem; margin-top: 6px;
     }
-    input { background: #2a2a2a; color: #fff; border: 1px solid #444; }
-    button { background: #228be6; color: white; font-weight: bold; cursor: pointer; }
+    input { background: #fff; color: #333; }
+    button { background: #228be6; color: white; font-weight: bold; border: none; cursor: pointer; }
     button:active { opacity: 0.8; }
 
     .board-container { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
-    .board-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #ffe066; }
+    .board-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #e67700; }
 
-    /* 将棋盤風：マス目を直に枠線でつなげた 6x6 盤面 */
+    /* 6x6 将棋盤風レイアウト */
     .grid-wrapper { display: grid; grid-template-columns: 20px repeat(6, 1fr); width: 100%; }
-    .header-col { text-align: center; font-size: 0.75rem; color: #aaa; font-weight: bold; height: 20px; line-height: 20px; }
-    .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #aaa; font-weight: bold; }
+    .header-col { text-align: center; font-size: 0.75rem; color: #666; font-weight: bold; height: 20px; line-height: 20px; }
+    .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #666; font-weight: bold; }
 
     .board {
       display: grid; grid-template-columns: repeat(6, 1fr);
-      background: #2b2b2b; border: 2px solid #555; aspect-ratio: 1; width: 100%;
+      background: #fff; border: 2px solid #333; aspect-ratio: 1; width: 100%;
     }
     .cell {
-      border: 1px solid #444; display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: 0.85rem; cursor: pointer; position: relative; background: #222;
+      border: 1px solid #bbb; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 0.85rem; cursor: pointer; position: relative; background: #fff;
     }
-    .cell.start { background: #1b4332 !important; color: #2ec4b6; }
-    .cell.goal { background: #4a0e17 !important; color: #ff4d6d; }
+    .cell.start { background: #d3f9d8 !important; color: #2b8a3e; }
+    .cell.goal { background: #ffe3e3 !important; color: #e03131; }
 
-    /* マスの「辺（境界線）」に付く壁の見た目 */
-    .wall-top { border-top: 5px solid #40c057 !important; z-index: 2; }       /* 未検知の壁（緑） */
-    .wall-bottom { border-bottom: 5px solid #40c057 !important; z-index: 2; }
-    .wall-left { border-left: 5px solid #40c057 !important; z-index: 2; }
-    .wall-right { border-right: 5px solid #40c057 !important; z-index: 2; }
+    /* マスの「辺（境界線）」に付く壁のスタイル */
+    .wall-top { border-top: 5px solid #2b8a3e !important; z-index: 2; }
+    .wall-bottom { border-bottom: 5px solid #2b8a3e !important; z-index: 2; }
+    .wall-left { border-left: 5px solid #2b8a3e !important; z-index: 2; }
+    .wall-right { border-right: 5px solid #2b8a3e !important; z-index: 2; }
 
-    .wall-hit-top { border-top: 5px solid #fa5252 !important; z-index: 2; }   /* 衝突した壁（赤） */
-    .wall-hit-bottom { border-bottom: 5px solid #fa5252 !important; z-index: 2; }
-    .wall-hit-left { border-left: 5px solid #fa5252 !important; z-index: 2; }
-    .wall-hit-right { border-right: 5px solid #fa5252 !important; z-index: 2; }
+    .wall-hit-top { border-top: 5px solid #e03131 !important; z-index: 2; }
+    .wall-hit-bottom { border-bottom: 5px solid #e03131 !important; z-index: 2; }
+    .wall-hit-left { border-left: 5px solid #e03131 !important; z-index: 2; }
+    .wall-hit-right { border-right: 5px solid #e03131 !important; z-index: 2; }
 
     .log-box {
-      background: #000; height: 60px; border-radius: 6px; padding: 6px 10px;
+      background: #f8f9fa; height: 60px; border-radius: 6px; padding: 6px 10px;
       font-size: 0.75rem; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
-      border: 1px solid #333;
+      border: 1px solid #ddd; color: #333;
     }
-    .log-line { margin: 1px 0; color: #ced4da; }
-    .log-sys { color: #74c0fc; font-weight: bold; }
+    .log-line { margin: 1px 0; color: #495057; }
+    .log-sys { color: #1971c2; font-weight: bold; }
 
-    /* 壁衝突時の「❌ だめ！」ポップアップ */
+    /* 衝突時の「❌ だめ！」ポップアップ */
     #dame-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85); display: none; flex-direction: column;
+      background: rgba(0,0,0,0.7); display: none; flex-direction: column;
       justify-content: center; align-items: center; z-index: 9999;
     }
     .dame-text {
-      font-size: 4rem; font-weight: 900; color: #ff3b30; text-shadow: 0 0 20px #ff0000;
+      font-size: 4rem; font-weight: 900; color: #ff3b30; text-shadow: 0 0 20px rgba(255,0,0,0.5);
       animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     @keyframes popIn { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -82,32 +82,31 @@
 
   <!-- ロビー画面 -->
   <div id="screen-lobby" class="card">
-    <label style="font-size:0.8rem; color:#aaa;">プレイヤー名</label>
+    <label style="font-size:0.8rem; color:#555;">プレイヤー名</label>
     <input type="text" id="input-name" value="プレイヤー">
     
     <div style="margin-top: 10px;">
       <button id="btn-cpu">🤖 CPU対戦（1人プレイ）</button>
     </div>
 
-    <hr style="margin: 12px 0; border: 0; border-top: 1px solid #333;">
+    <hr style="margin: 12px 0; border: 0; border-top: 1px solid #ddd;">
 
     <div>
-      <label style="font-size:0.8rem; color:#aaa;">オンライン対戦 (部屋ID)</label>
-      <input type="text" id="input-room" placeholder="部屋IDを入力">
+      <label style="font-size:0.8rem; color:#555;">オンライン対戦 (部屋ID)</label>
+      <input type="text" id="input-room" placeholder="例: room123 など">
       <div style="display:flex; gap:6px; margin-top:6px;">
-        <button id="btn-create" style="background:#12b886;">部屋を作る</button>
-        <button id="btn-join" style="background:#ff922b;">部屋に入る</button>
+        <button id="btn-create" style="background:#2b8a3e;">部屋を作る</button>
+        <button id="btn-join" style="background:#e67700;">部屋に入る</button>
       </div>
     </div>
   </div>
 
   <!-- ゲーム画面 -->
   <div id="screen-game" class="card hidden">
-    <div id="status-bar" style="font-size:0.8rem; color:#4dabf7; text-align:center; font-weight:bold; margin-bottom:6px;"></div>
+    <div id="status-bar" style="font-size:0.8rem; color:#1971c2; text-align:center; font-weight:bold; margin-bottom:6px;"></div>
 
-    <!-- セットアップモード説明 -->
     <div id="setup-controls" class="hidden" style="text-align:center; margin-bottom:6px;">
-      <p style="font-size:0.75rem; color:#ccc;">① スタート(S)とゴール(G)を指定<br>② マスの端（辺）をタップして壁(緑)を配置</p>
+      <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ指定<br>② マスの境界線（辺）をタップして壁(緑)を配置</p>
       <button id="btn-finish-setup" style="margin-top:6px; background:#2b8a3e;">配置完了！</button>
     </div>
 
@@ -149,14 +148,14 @@
 
   let startPos = { r: 5, c: 0 }; // F1
   let goalPos = { r: 0, c: 5 };  // A6
-  let myEdgeWalls = [];          // {r1, c1, r2, c2, hit: false}
+  let myEdgeWalls = [];          
   let oppEdgeWalls = [];
   let myCurrentPos = null;
   let oppCurrentPos = null;
 
   let phase = 'lobby';
   let isMyTurn = false;
-  let setupStep = 'start'; // 'start' -> 'goal' -> 'walls'
+  let setupStep = 'start';
 
   const $ = id => document.getElementById(id);
 
@@ -197,12 +196,15 @@
     if (!roomId) return alert("部屋IDを入力してください");
     peer = new Peer(roomId);
     peer.on('open', id => {
-      showLog(`部屋作成完了: ${id}`, true);
+      showLog(`部屋作成完了: ${id} (相手の接続待ち)`, true);
       startMode('online');
     });
     peer.on('connection', c => {
       conn = c;
       setupConnection();
+    });
+    peer.on('error', err => {
+      alert("部屋の作成に失敗しました（すでに使われているIDの可能性があります）");
     });
   }
 
@@ -214,12 +216,15 @@
       conn = peer.connect(roomId);
       setupConnection();
     });
+    peer.on('error', err => {
+      alert("部屋への接続に失敗しました");
+    });
   }
 
   function setupConnection() {
     conn.on('open', () => {
       showLog("対戦相手と接続しました！", true);
-      startMode('online');
+      if (phase === 'lobby') startMode('online');
     });
     conn.on('data', data => handleNetData(data));
   }
@@ -259,7 +264,6 @@
         setupStep = 'walls';
         updateStatus("【初期設定】マスの境界線（辺）をタップして壁を配置してください");
       } else if (setupStep === 'walls') {
-        // マスの境界線（上下左右の辺）タップ判定
         const rect = event.target.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
