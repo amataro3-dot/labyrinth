@@ -46,12 +46,23 @@
     }
 
     /* 辺の壁スタイル */
-    .wall-v { width: 4px; height: 100%; position: absolute; right: -2px; top: 0; z-index: 2; cursor: pointer; }
-    .wall-h { width: 100%; height: 4px; position: absolute; bottom: -2px; left: 0; z-index: 2; cursor: pointer; }
-    .wall-active { background-color: #d9534f; }
-    .wall-hit { background-color: #d9534f !important; }
-    .wall-miss { background-color: #5cb85c !important; }
-    .wall-hover:hover { background-color: rgba(217, 83, 79, 0.4); }
+    .wall-v { width: 4px; height: 100%; position: absolute; right: -2px; top: 0; z-index: 2; pointer-events: none; }
+    .wall-h { width: 100%; height: 4px; position: absolute; bottom: -2px; left: 0; z-index: 2; pointer-events: none; }
+    
+    .wall-active-top { border-top: 4px solid #d9534f; }
+    .wall-active-bottom { border-bottom: 4px solid #d9534f; }
+    .wall-active-left { border-left: 4px solid #d9534f; }
+    .wall-active-right { border-right: 4px solid #d9534f; }
+
+    .wall-hit-top { border-top: 4px solid #d9534f !important; }
+    .wall-hit-bottom { border-bottom: 4px solid #d9534f !important; }
+    .wall-hit-left { border-left: 4px solid #d9534f !important; }
+    .wall-hit-right { border-right: 4px solid #d9534f !important; }
+
+    .wall-miss-top { border-top: 4px solid #5cb85c !important; }
+    .wall-miss-bottom { border-bottom: 4px solid #5cb85c !important; }
+    .wall-miss-left { border-left: 4px solid #5cb85c !important; }
+    .wall-miss-right { border-right: 4px solid #5cb85c !important; }
 
     /* 4行分のログ表示エリア */
     .log-box {
@@ -123,8 +134,8 @@
     <div id="status-bar" style="font-size:0.85rem; color:#d9534f; text-align:center; font-weight:bold; margin-bottom:4px;"></div>
 
     <div id="setup-controls" class="hidden" style="text-align:center; margin-bottom:4px;">
-      <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ<br>② 辺をタップして壁を配置 (3つ)</p>
-      <button id="btn-finish-setup" style="margin-top:4px; background:#2b8a3e;" disabled>配置完了 (0/3)</button>
+      <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ<br>② 辺をタップして壁を配置 (最大10個)</p>
+      <button id="btn-finish-setup" style="margin-top:4px; background:#2b8a3e;" disabled>配置完了 (0/10)</button>
     </div>
 
     <div class="board-container">
@@ -250,7 +261,6 @@
     initGridUI();
   }
 
-  // オンライン機能のセットアップ
   function joinOrCreateOnlineRoom() {
     myName = $('input-name').value.trim() || 'プレイヤー';
     roomId = $('input-room').value.trim();
@@ -474,9 +484,9 @@
         if (r === startPos.r && c === startPos.c) return;
         goalPos = { r, c };
         setupStep = 'walls';
-        updateStatus("【初期設定】マスの境界線（辺）をタップして壁を3つ配置してください");
+        updateStatus("【初期設定】マスの境界線（辺）をタップして壁を最大10個まで配置してください");
       } else if (setupStep === 'walls') {
-        const rect = event.target.getBoundingClientRect();
+        const rect = event.currentTarget.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const w = rect.width; const h = rect.height;
@@ -504,14 +514,14 @@
     if (idx >= 0) {
       myWalls.splice(idx, 1);
     } else {
-      if (myWalls.length < 3) {
+      if (myWalls.length < 10) {
         myWalls.push({ r1, c1, r2, c2 });
       }
     }
     const count = myWalls.length;
     const btn = $('btn-finish-setup');
-    btn.textContent = `配置完了 (${count}/3)`;
-    if (count === 3) btn.disabled = false;
+    btn.textContent = `配置完了 (${count}/10)`;
+    if (count > 0) btn.disabled = false;
     else btn.disabled = true;
   }
 
@@ -529,13 +539,13 @@
 
     if (mode === 'cpu') {
       oppWalls = [];
-      while(oppWalls.length < 3) {
+      while(oppWalls.length < Math.max(3, myWalls.length)) {
         let r1 = Math.floor(Math.random() * 6);
         let c1 = Math.floor(Math.random() * 6);
         let dirs = [{r:1,c:0},{r:0,c:1}];
         let d = dirs[Math.floor(Math.random()*dirs.length)];
         let r2 = r1 + d.r, c2 = c1 + d.c;
-        if (r2 < 6 && c2 < 6) {
+        if (r2 < 6 && c2 < 6) {     
           if (!oppWalls.some(w => isSameEdge(w, r1, c1, r2, c2))) {
             oppWalls.push({ r1, c1, r2, c2 });
           }
@@ -543,7 +553,7 @@
       }
       phase = 'playing';
       isMyTurn = true;
-      updateStatus("あなたのターン：壁にぶつかるまで進めます");
+      updateStatus("あなたのターン：相手の盤面をタップして進んでください");
       showLog("ゲーム開始！あなたのターンです。");
     }
     renderBoards();
@@ -590,7 +600,7 @@
       pHitWalls.add(hitWall);
       showLog(`CPUが ${ROWS[target.r]}${target.c + 1} の壁に衝突！`);
       isMyTurn = true;
-      updateStatus("あなたのターン：壁にぶつかるまで進めます");
+      updateStatus("あなたのターン：相手の盤面をタップして進んでください");
       renderBoards();
     } else {
       oppPos = target;
@@ -657,11 +667,9 @@
     const targetWall = wallsList.find(w => isSameEdge(w, r1, c1, r2, c2));
     const isHit = hitSet.has(targetWall);
     
-    let prefix = 'wall-';
+    let prefix = 'wall-active-';
     if (phase === 'ended') {
       prefix = isHit ? 'wall-hit-' : 'wall-miss-';
-    } else {
-      prefix = 'wall-active-';
     }
 
     if (r2 < r1) cell.classList.add(prefix + 'top');
