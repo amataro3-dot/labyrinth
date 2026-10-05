@@ -3,46 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="light">
   <title>Labyrinth</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
+    :root { color-scheme: light; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f4f4f9; color: #333; display: flex; flex-direction: column;
+      background: #f4f4f9 !important; color: #333 !important; display: flex; flex-direction: column;
       align-items: center; justify-content: center; min-height: 100vh; padding: 8px;
       user-select: none; -webkit-user-select: none;
     }
     .container { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; }
     h1 { text-align: center; font-size: 1.2rem; color: #1971c2; letter-spacing: 2px; }
-    .card { background: #ffffff; border-radius: 12px; padding: 12px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    input, button {
+    .card { background: #ffffff !important; border-radius: 12px; padding: 12px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #333 !important; }
+    input, select, button {
       width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.9rem; margin-top: 6px;
     }
-    input { background: #fff; color: #333; }
-    button { background: #228be6; color: white; font-weight: bold; border: none; cursor: pointer; }
+    input, select { background: #fff !important; color: #333 !important; }
+    button { background: #228be6 !important; color: white !important; font-weight: bold; border: none; cursor: pointer; }
     button:active { opacity: 0.8; }
 
     .board-container { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
     .board-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #e67700; }
 
-    /* 6x6 将棋盤風レイアウト */
     .grid-wrapper { display: grid; grid-template-columns: 20px repeat(6, 1fr); width: 100%; }
     .header-col { text-align: center; font-size: 0.75rem; color: #666; font-weight: bold; height: 20px; line-height: 20px; }
     .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #666; font-weight: bold; }
 
     .board {
       display: grid; grid-template-columns: repeat(6, 1fr);
-      background: #fff; border: 2px solid #333; aspect-ratio: 1; width: 100%;
+      background: #fff !important; border: 2px solid #333; aspect-ratio: 1; width: 100%;
     }
     .cell {
       border: 1px solid #bbb; display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: 0.85rem; cursor: pointer; position: relative; background: #fff;
+      font-weight: bold; font-size: 0.85rem; cursor: pointer; position: relative; background: #fff !important; color: #333;
     }
-    .cell.start { background: #d3f9d8 !important; color: #2b8a3e; }
-    .cell.goal { background: #ffe3e3 !important; color: #e03131; }
+    .cell.start { background: #d3f9d8 !important; color: #2b8a3e !important; }
+    .cell.goal { background: #ffe3e3 !important; color: #e03131 !important; }
 
-    /* マスの「辺（境界線）」に付く壁のスタイル */
+    /* 辺の壁スタイル */
     .wall-top { border-top: 5px solid #2b8a3e !important; z-index: 2; }
     .wall-bottom { border-bottom: 5px solid #2b8a3e !important; z-index: 2; }
     .wall-left { border-left: 5px solid #2b8a3e !important; z-index: 2; }
@@ -53,15 +54,15 @@
     .wall-hit-left { border-left: 5px solid #e03131 !important; z-index: 2; }
     .wall-hit-right { border-right: 5px solid #e03131 !important; z-index: 2; }
 
+    /* 4行分のログ表示エリア */
     .log-box {
-      background: #f8f9fa; height: 60px; border-radius: 6px; padding: 6px 10px;
+      background: #f8f9fa !important; height: 75px; border-radius: 6px; padding: 6px 10px;
       font-size: 0.75rem; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
-      border: 1px solid #ddd; color: #333;
+      border: 1px solid #ddd; color: #333 !important;
     }
-    .log-line { margin: 1px 0; color: #495057; }
-    .log-sys { color: #1971c2; font-weight: bold; }
+    .log-line { margin: 1px 0; color: #495057 !important; }
+    .log-sys { color: #1971c2 !important; font-weight: bold; }
 
-    /* 衝突時の「❌ だめ！」ポップアップ */
     #dame-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.7); display: none; flex-direction: column;
@@ -94,10 +95,30 @@
     <div>
       <label style="font-size:0.8rem; color:#555;">オンライン対戦 (部屋ID)</label>
       <input type="text" id="input-room" placeholder="例: room123 など">
-      <div style="display:flex; gap:6px; margin-top:6px;">
-        <button id="btn-create" style="background:#2b8a3e;">部屋を作る</button>
-        <button id="btn-join" style="background:#e67700;">部屋に入る</button>
+      <div style="margin-top:6px;">
+        <button id="btn-join-room" style="background:#2b8a3e !important;">部屋に入る / 作る</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ロビー待機・役割選択画面（最大8人） -->
+  <div id="screen-room" class="card hidden">
+    <div id="room-title" style="font-size:0.9rem; font-weight:bold; color:#1971c2; text-align:center; margin-bottom:6px;"></div>
+    <div style="font-size:0.8rem; color:#555; margin-bottom:4px;">参加者一覧 (<span id="member-count">0</span>/8人)</div>
+    <div id="member-list" style="background:#f8f9fa; border:1px solid #ddd; border-radius:6px; padding:6px; font-size:0.8rem; min-height:50px; max-height:90px; overflow-y:auto; margin-bottom:8px;"></div>
+
+    <div id="role-selection">
+      <label style="font-size:0.8rem; color:#555;">希望する役割</label>
+      <select id="select-role">
+        <option value="player">対戦者</option>
+        <option value="spectator">観戦者</option>
+      </select>
+      <button id="btn-confirm-role" style="margin-top:6px; background:#e67700 !important;">決定して参加</button>
+    </div>
+
+    <div id="admin-controls" class="hidden" style="margin-top:10px; border-top:1px solid #ddd; padding-top:8px;">
+      <div style="font-size:0.75rem; color:#2b8a3e; font-weight:bold; text-align:center; margin-bottom:4px;">👑 あなたは管理者です</div>
+      <button id="btn-start-game" style="background:#2b8a3e !important;" disabled>対戦者が2人揃うと開始できます</button>
     </div>
   </div>
 
@@ -107,7 +128,7 @@
 
     <div id="setup-controls" class="hidden" style="text-align:center; margin-bottom:6px;">
       <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ指定<br>② マスの境界線（辺）をタップして壁(緑)を配置</p>
-      <button id="btn-finish-setup" style="margin-top:6px; background:#2b8a3e;">配置完了！</button>
+      <button id="btn-finish-setup" style="margin-top:6px; background:#2b8a3e !important;">配置完了！</button>
     </div>
 
     <div class="board-container">
@@ -130,24 +151,35 @@
       </div>
     </div>
 
-    <div style="margin-top:6px;">
+    <!-- ログおよび観戦者コメント入力エリア -->
+    <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
       <div class="log-box" id="log-box"></div>
+      <div id="spectator-chat-box" class="hidden" style="display:flex; gap:4px;">
+        <input type="text" id="input-comment" placeholder="観戦コメントを入力..." style="margin-top:0;">
+        <button id="btn-send-comment" style="width:80px; margin-top:0; background:#1971c2 !important;">送信</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- 衝突時オーバーレイ（❌ だめ！） -->
 <div id="dame-overlay">
   <div class="dame-text">❌ だめ！</div>
 </div>
 
 <script>
   const ROWS = ['A','B','C','D','E','F'];
-  let mode = 'cpu';
-  let peer = null, conn = null;
+  let mode = 'cpu'; // 'cpu' or 'online'
+  let peer = null, myId = '', roomId = '';
+  let connections = []; // 管理者用：全接続保持
+  let hostConn = null;  // 参加者用：ホストへの接続
+  
+  let myName = 'プレイヤー';
+  let myRole = 'player'; // 'player' or 'spectator'
+  let isHost = false;
+  let members = []; // [{id, name, role}]
 
-  let startPos = { r: 5, c: 0 }; // F1
-  let goalPos = { r: 0, c: 5 };  // A6
+  let startPos = { r: 5, c: 0 };
+  let goalPos = { r: 0, c: 5 };
   let myEdgeWalls = [];          
   let oppEdgeWalls = [];
   let myCurrentPos = null;
@@ -160,18 +192,23 @@
   const $ = id => document.getElementById(id);
 
   window.onload = () => {
-    $('btn-cpu').onclick = () => startMode('cpu');$('btn-create').onclick = createRoom;
-    $('btn-join').onclick = joinRoom;
+    $('btn-cpu').onclick = () => startCpuMode();$('btn-join-room').onclick = joinOrCreateOnlineRoom;
+    $('btn-confirm-role').onclick = confirmRole;
     $('btn-finish-setup').onclick = finishSetup;
+    $('btn-start-game').onclick = adminStartGame;
+    $('btn-send-comment').onclick = sendSpectatorComment;
   };
 
-  function showLog(msg, isSys = false) {
+  function showLog(msg) {
     const box = $('log-box');
     const div = document.createElement('div');
-    div.className = 'log-line' + (isSys ? ' log-sys' : '');
+    div.className = 'log-line';
     div.textContent = msg;
     box.appendChild(div);
-    if (box.children.length > 5) box.removeChild(box.firstChild);
+    // 4行を超えたら古いものを削除
+    while (box.children.length > 4) {
+      box.removeChild(box.firstChild);
+    }
     box.scrollTop = box.scrollHeight;
   }
 
@@ -181,54 +218,227 @@
     setTimeout(() => { el.style.display = 'none'; }, 1000);
   }
 
-  function startMode(m) {
-    mode = m;
+  // --- CPU モード ---
+  function startCpuMode() {
+    mode = 'cpu';
+    myName = $('input-name').value.trim() || 'プレイヤー';
     $('screen-lobby').classList.add('hidden');
     $('screen-game').classList.remove('hidden');$('setup-controls').classList.remove('hidden');
     phase = 'setup';
     setupStep = 'start';
     updateStatus("【初期設定】スタート(S)の位置をタップしてください");
     initGridUI();
+    showLog("CPU対戦を開始しました。");
   }
 
-  function createRoom() {
-    const roomId = $('input-room').value.trim();
+  // --- オンライン モード (PeerJS) ---
+  function joinOrCreateOnlineRoom() {
+    myName = $('input-name').value.trim() || 'プレイヤー';
+    roomId = $('input-room').value.trim();
     if (!roomId) return alert("部屋IDを入力してください");
-    peer = new Peer(roomId);
-    peer.on('open', id => {
-      showLog(`部屋作成完了: ${id} (相手の接続待ち)`, true);
-      startMode('online');
-    });
-    peer.on('connection', c => {
-      conn = c;
-      setupConnection();
-    });
-    peer.on('error', err => {
-      alert("部屋の作成に失敗しました（すでに使われているIDの可能性があります）");
-    });
-  }
 
-  function joinRoom() {
-    const roomId = $('input-room').value.trim();
-    if (!roomId) return alert("部屋IDを入力してください");
     peer = new Peer();
-    peer.on('open', () => {
-      conn = peer.connect(roomId);
-      setupConnection();
+    peer.on('open', id => {
+      myId = id;
+      // まずホストとして接続を試みる、ダメならクライアントとして接続
+      connectToRoomAsClient(roomId);
     });
     peer.on('error', err => {
-      alert("部屋への接続に失敗しました");
+      alert("接続エラーが発生しました");
     });
   }
 
-  function setupConnection() {
+  function connectToRoomAsClient(targetId) {
+    const conn = peer.connect(targetId);
     conn.on('open', () => {
-      showLog("対戦相手と接続しました！", true);
-      if (phase === 'lobby') startMode('online');
+      hostConn = conn;
+      isHost = false;
+      setupClientListeners(conn);
+      conn.send({ type: 'join', name: myName, id: myId });
+      transitionToRoomScreen(targetId);
     });
-    conn.on('data', data => handleNetData(data));
+    conn.on('error', () => {
+      // 接続失敗時は自分がホスト（部屋作成者）になる
+      createRoomAsHost(targetId);
+    });
   }
 
+  function createRoomAsHost(id) {
+    peer.destroy();
+    peer = new Peer(id);
+    peer.on('open', () => {
+      isHost = true;
+      myId = id;
+      members.push({ id: myId, name: myName, role: 'player' }); // ホストはデフォルト対戦者枠など
+      peer.on('connection', c => {
+        setupHostListeners(c);
+      });
+      transitionToRoomScreen(id);
+      updateMemberListUI();
+      showLog(`部屋「${id}」を作成しました。`);
+    });
+    peer.on('error', () => {
+      alert("部屋の作成に失敗しました（IDがすでに使われている可能性があります）");
+    });
+  }
+
+  function transitionToRoomScreen(id) {
+    $('screen-lobby').classList.add('hidden');
+    $('screen-room').classList.remove('hidden');$('room-title').textContent = `部屋ID: ${id}`;
+    if (isHost) {
+      $('admin-controls').classList.remove('hidden');
+    }
+  }
+
+  // ホスト側のリスナー
+  function setupHostListeners(conn) {
+    connections.push(conn);
+    conn.on('data', data => {
+      if (data.type === 'join') {
+        if (members.length >= 8) {
+          conn.send({ type: 'error', message: '部屋が満員です（最大8人）' });
+          return;
+        }
+        members.push({ id: conn.peer, name: data.name, role: 'spectator' }); // デフォルト観戦
+        broadcastMembers();
+      } else if (data.type === 'select_role') {
+        const target = members.find(m => m.id === conn.peer);
+        if (target) {
+          if (data.role === 'player') {
+            const currentPlayers = members.filter(m => m.role === 'player').length;
+            if (currentPlayers >= 2) {
+              conn.send({ type: 'error', message: '対戦者はすでに2人埋まっています' });
+              return;
+            }
+          }
+          target.role = data.role;
+          broadcastMembers();
+        }
+      } else if (data.type === 'comment') {
+        broadcastMessage({ type: 'chat', name: data.name, text: data.text });
+      }
+    });
+    conn.on('close', () => {
+      members = members.filter(m => m.id !== conn.peer);
+      connections = connections.filter(c => c !== conn);
+      broadcastMembers();
+    });
+  }
+
+  function setupClientListeners(conn) {
+    conn.on('data', data => {
+      if (data.type === 'members_update') {
+        members = data.members;
+        updateMemberListUI();
+      } else if (data.type === 'start_game') {
+        startGameOnline(data.role);
+      } else if (data.type === 'chat') {
+        showLog(`[観戦] ${data.name}: ${data.text}`);
+      } else if (data.type === 'error') {
+        alert(data.message);
+      }
+    });
+  }
+
+  function broadcastMembers() {
+    updateMemberListUI();
+    connections.forEach(c => c.send({ type: 'members_update', members: members }));
+  }
+
+  function broadcastMessage(msg) {
+    if (msg.type === 'chat') {
+      showLog(`[観戦] ${msg.name}: ${msg.text}`);
+    }
+    connections.forEach(c => c.send(msg));
+  }
+
+  function updateMemberListUI() {
+    $('member-count').textContent = members.length;
+    const listEl = $('member-list');
+    listEl.innerHTML = members.map(m => `<div>${m.name} (${m.role === 'player' ? '対戦者' : '観戦者'})</div>`).join('');
+
+    // すでにゲーム中なら対戦を選べなくする制御
+    const playerCnt = members.filter(m => m.role === 'player').length;
+    if (playerCnt >= 2) {
+      const select = $('select-role');
+      // 自分がまだプレイヤーでないなら選択肢を観戦のみに制限
+      const me = members.find(m => m.id === (isHost ? myId : hostConn.peer));
+      if (me && me.role !== 'player') {
+        select.innerHTML = '<option value="spectator">観戦者 (対戦中のため満員)</option>';
+      }
+    }
+
+    if (isHost) {
+      const startBtn = $('btn-start-game');
+      if (playerCnt === 2) {
+        startBtn.disabled = false;
+        startBtn.textContent = 'ゲーム開始！';
+      } else {
+        startBtn.disabled = true;
+        startBtn.textContent = `対戦者あと ${2 - playerCnt} 人必要です`;
+      }
+    }
+  }
+
+  function confirmRole() {
+    const role = $('select-role').value;
+    myRole = role;
+    if (isHost) {
+      const me = members.find(m => m.id === myId);
+      if (me) {
+        if (role === 'player' && members.filter(m => m.role === 'player').length >= 2) {
+          return alert("対戦者はすでに2人埋まっています");
+        }
+        me.role = role;
+        broadcastMembers();
+      }
+    } else {
+      hostConn.send({ type: 'select_role', role: role });
+    }
+    alert(`役割「${role === 'player' ? '対戦者' : '観戦者'}」で確定しました。`);
+  }
+
+  function adminStartGame() {
+    if (!isHost) return;
+    const players = members.filter(m => m.role === 'player');
+    if (players.length !== 2) return alert("対戦者が2人必要です");
+
+    // ホストから全員にゲーム開始を通知
+    connections.forEach(c => {
+      const p = members.find(m => m.id === c.peer);
+      c.send({ type: 'start_game', role: p ? p.role : 'spectator' });
+    });
+    startGameOnline('player'); // ホスト自身
+  }
+
+  function startGameOnline(role) {
+    myRole = role;
+    $('screen-room').classList.add('hidden');$('screen-game').classList.remove('hidden');
+    
+    if (myRole === 'spectator') {
+      $('setup-controls').classList.add('hidden');$('spectator-chat-box').classList.remove('hidden');
+      updateStatus("観戦中：対戦を見守っています");
+    } else {
+      $('setup-controls').classList.remove('hidden');
+      phase = 'setup';
+      setupStep = 'start';
+      updateStatus("【初期設定】スタート(S)の位置をタップしてください");
+    }
+    initGridUI();
+  }
+
+  function sendSpectatorComment() {
+    const text = $('input-comment').value.trim();
+    if (!text) return;
+    $('input-comment').value = '';
+    if (isHost) {
+      broadcastMessage({ type: 'chat', name: myName, text: text });
+    } else {
+      hostConn.send({ type: 'comment', name: myName, text: text });
+    }
+  }
+
+  // --- 共通ゲームロジック・UI描画 ---
   function updateStatus(text) {
     $('status-bar').textContent = text;
   }
@@ -253,6 +463,8 @@
   }
 
   function onCellClick(r, c, boardType, event) {
+    if (myRole === 'spectator') return; // 観戦者は操作不可
+
     if (phase === 'setup' && boardType === 'self') {
       if (setupStep === 'start') {
         startPos = { r, c };
@@ -319,11 +531,8 @@
       phase = 'playing';
       isMyTurn = true;
       updateStatus("あなたのターン：ぶつかるまで進めます");
-    } else {
-      conn.send({ type: 'ready', start: startPos, goal: goalPos, walls: myEdgeWalls });
-      updateStatus("相手の配置完了を待っています...");
+      showLog("ゲーム開始！自分のターンです。");
     }
-    renderBoards();
   }
 
   function attemptMove(from, to) {
@@ -332,7 +541,7 @@
       if (wall) {
         wall.hit = true;
         triggerDame();
-        showLog(`【壁衝突】${ROWS[to.r]}${to.c + 1} の手前で「❌ だめ！」`, true);
+        showLog(`【壁衝突】${ROWS[to.r]}${to.c + 1} の手前で「❌ だめ！」`);
         endTurn();
       } else {
         myCurrentPos = { ...to };
@@ -341,11 +550,9 @@
         if (to.r === goalPos.r && to.c === goalPos.c) {
           phase = 'ended';
           updateStatus("🎉 あなたの勝利です！ゴール到達！");
-          showLog("ゴール到達！あなたの勝ち！", true);
+          showLog("ゴール到達！あなたの勝ち！");
         }
       }
-    } else {
-      conn.send({ type: 'move', from, to });
     }
   }
 
@@ -366,7 +573,7 @@
     const hitWall = myEdgeWalls.find(w => isSameEdge(w, oppCurrentPos.r, oppCurrentPos.c, target.r, target.c));
     if (hitWall) {
       hitWall.hit = true;
-      showLog(`CPUが ${ROWS[target.r]}${target.c + 1} の壁に衝突！`, true);
+      showLog(`CPUが ${ROWS[target.r]}${target.c + 1} の壁に衝突！`);
       isMyTurn = true;
       updateStatus("あなたのターン：ぶつかるまで進めます");
       renderBoards();
@@ -377,38 +584,9 @@
       if (oppCurrentPos.r === goalPos.r && oppCurrentPos.c === goalPos.c) {
         phase = 'ended';
         updateStatus("💀 CPUの勝利です...");
+        showLog("CPUの勝ちになりました。");
       } else {
         setTimeout(cpuTurnStep, 800);
-      }
-    }
-  }
-
-  function handleNetData(data) {
-    if (data.type === 'ready') {
-      oppEdgeWalls = data.walls;
-      phase = 'playing';
-      isMyTurn = true;
-      updateStatus("あなたのターンです");
-    } else if (data.type === 'move') {
-      const wall = myEdgeWalls.find(w => isSameEdge(w, data.from.r, data.from.c, data.to.r, data.to.c));
-      if (wall) {
-        wall.hit = true;
-        conn.send({ type: 'move_reply', hit: true, from: data.from, to: data.to });
-        isMyTurn = true;
-        updateStatus("あなたのターンです");
-      } else {
-        oppCurrentPos = data.to;
-        conn.send({ type: 'move_reply', hit: false, from: data.from, to: data.to });
-      }
-      renderBoards();
-    } else if (data.type === 'move_reply') {
-      if (data.hit) {
-        triggerDame();
-        showLog(`【壁衝突】「❌ だめ！」`, true);
-        endTurn();
-      } else {
-        myCurrentPos = data.to;
-        renderBoards();
       }
     }
   }
