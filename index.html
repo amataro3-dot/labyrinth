@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>軍人将棋風 迷路ゲーム</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a1a; color: #fff; display: flex; flex-direction: column;
+      align-items: center; min-height: 100vh; padding: 10px;
+    }
+    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px; }
+    h1 { text-align: center; font-size: 1.2rem; color: #4dabf7; margin-bottom: 4px; }
+    .card { background: #2a2a2a; border-radius: 8px; padding: 12px; border: 1px solid #333; }
+    input, select, button {
+      width: 100%; padding: 10px; border-radius: 6px; border: none; font-size: 1rem; margin-top: 6px;
+    }
+    input, select { background: #333; color: #fff; border: 1px solid #444; }
+    button { background: #228be6; color: white; font-weight: bold; cursor: pointer; }
+    button:active { opacity: 0.8; }
+    button.secondary { background: #495057; }
+    .board-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; color: #ffe066; }
+    .board {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;
+      background: #111; padding: 4px; border-radius: 6px; aspect-ratio: 1;
+    }
+    .cell {
+      background: #343a40; border-radius: 4px; display: flex;
+      align-items: center; justify-content: center; font-weight: bold;
+      font-size: 0.8rem; cursor: pointer; user-select: none;
+    }
+    .cell.start { background: #2b8a3e; color: white; }
+    .cell.goal { background: #e03131; color: white; }
+    .cell.wall-revealed { background: #e03131; }
+    .log-box {
+      background: #111; height: 90px; border-radius: 6px; padding: 6px 10px;
+      font-size: 0.8rem; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .log-line { margin: 2px 0; color: #ced4da; line-height: 1.2; }
+    .log-sys { color: #74c0fc; }
+    .chat-inputs { display: flex; gap: 6px; }
+    .chat-inputs input { margin: 0; flex: 1; }
+    .chat-inputs button { margin: 0; width: 70px; }
+    #dame-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7); display: none; justify-content: center;
+      align-items: center; z-index: 9999;
+    }
+    #dame-overlay img { max-width: 80%; max-height: 60%; animation: popIn 0.2s ease-out; }
+    @keyframes popIn { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>軍人将棋風 迷路ゲーム</h1>
+
+  <!-- 1. 部屋作成/参加ロビー -->
+  <div id="screen-lobby" class="card">
+    <label>名前</label>
+    <input type="text" id="input-name" placeholder="名前を入力" value="プレイヤー">
+
+    <div style="margin-top: 15px;">
+      <button id="btn-cpu">🤖 1人で遊ぶ (CPU対戦)</button>
+    </div>
+
+    <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
+
+    <label>観戦者の壁可視化設定</label>
+    <select id="select-spec-mode">
+      <option value="show">観戦者に壁を見せる</option>
+      <option value="hide">観戦者にも壁を隠す</option>
+    </select>
+    <button id="btn-create" class="secondary" style="margin-top:6px;">🏠 対戦部屋を作る</button>
+
+    <div style="margin-top: 15px;">
+      <input type="text" id="input-room-id" placeholder="合言葉（部屋ID）">
+      <button id="btn-join-player" style="margin-top:6px;">⚔️ 対戦相手として参加</button>
+      <button id="btn-join-spec" class="secondary" style="margin-top:6px;">👀 観戦者として参加</button>
+    </div>
+  </div>
+
+  <!-- 2. ゲーム画面 -->
+  <div id="screen-game" class="card hidden">
+    <div id="status-bar" style="font-size:0.85rem; color:#aaa; margin-bottom:6px; text-align:center;"></div>
+
+    <div class="board-title" id="title-opponent">相手の陣地</div>
+    <div id="board-opponent" class="board"></div>
+
+    <div class="board-title" id="title-self" style="margin-top:10px;">自分の陣地</div>
+    <div id="board-self" class="board"></div>
+
+    <button id="btn-ready" class="hidden" style="margin-top:10px; background:#2b8a3e;">壁の配置完了！</button>
+
+    <div style="margin-top:10px;">
+      <div class="log-box" id="log-box"></div>
+    </div>
+
+    <div id="chat-container" class="chat-inputs hidden" style="margin-top:6px;">
+      <input type="text" id="input-chat" placeholder="観戦コメント...">
+      <button id="btn-chat-send">送信</button>
+    </div>
+  </div>
+</div>
+
+<div id="dame-overlay">
+  <img id="dame-img" src="" alt="だめ。">
+</div>
+
+<script>
+  const DAME_IMAGE_BASE64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'><rect width='300' height='300' fill='none'/><circle cx='150' cy='150' r='120' stroke='%23ff0000' stroke-width='20' fill='none'/><line x1='60' y1='60' x2='240' y2='240' stroke='%23ff0000' stroke-width='20'/><text x='150' y='170' font-size='60' font-weight='bold' fill='%23ff0000' text-anchor='middle'>だめ。</text></svg>";
+
+  let mode = "cpu"; // "cpu", "host", "guest", "spec"
+  let peer = null;
+  let conn = null;
+  let myWalls = [];
+  let oppWalls = [];
+  let myPos = { x: 0, y: 5 };
+  let oppPos = { x: 0, y: 5 };
+  let phase = "setup"; // "setup", "playing", "ended"
+  let isMyTurn = false;
+  let specMode = "show";
+
+  const $ = id => document.getElementById(id);
+
+  window.onload = () => {
+    $('dame-img').src = DAME_IMAGE_BASE64;
+    $('btn-cpu').onclick = startCpuMode;
+  };
+
+  function showLog(msg, isSys = false) {
+    const box = $('log-box');
+    const div = document.createElement('div');
+    div.className = 'log-line' + (isSys ? ' log-sys' : '');
+    div.textContent = msg;
+    box.appendChild(div);
+    if (box.children.length > 4) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function triggerDame() {
+    const el = $('dame-overlay');
+    el.style.display = 'flex';
+    setTimeout(() => { el.style.display = 'none'; }, 1000);
+  }
+
+  function startCpuMode() {
+    mode = 'cpu';
+    $('screen-lobby').classList.add('hidden');
+    $('screen-game').classList.remove('hidden');$('status-bar').textContent = "自分の陣地に壁（最大10個）を配置してください";
+    showLog("CPU対戦を開始します", true);
+    initBoards();
+  }
+
+  function initBoards() {
+    const bSelf = $('board-self');
+    const bOpp = $('board-opponent');
+    bSelf.innerHTML = ''; bOpp.innerHTML = '';
+
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 6; x++) {
+        const cS = document.createElement('div');
+        cS.className = 'cell';
+        cS.dataset.x = x; cS.dataset.y = y;
+        if (x === 0 && y === 5) { cS.classList.add('start'); cS.textContent = 'S'; }
+        if (x === 5 && y === 0) { cS.classList.add('goal'); cS.textContent = 'G'; }
+        cS.onclick = () => onSelfCellClick(x, y);
+        bSelf.appendChild(cS);
+
+        const cO = document.createElement('div');
+        cO.className = 'cell';
+        cO.dataset.x = x; cO.dataset.y = y;
+        if (x === 0 && y === 5) { cO.classList.add('start'); cO.textContent = 'S'; }
+        if (x === 5 && y === 0) { cO.classList.add('goal'); cO.textContent = 'G'; }
+        cO.onclick = () => onOppCellClick(x, y);
+        bOpp.appendChild(cO);
+      }
+    }
+    if (mode === 'cpu') {
+      $('btn-ready').classList.remove('hidden');$('btn-ready').onclick = finishCpuSetup;
+    }
+  }
+
+  function onSelfCellClick(x, y) {
+    if (phase !== 'setup') return;
+    if ((x === 0 && y === 5) || (x === 5 && y === 0)) return;
+    const idx = myWalls.findIndex(w => w.x === x && w.y === y);
+    if (idx >= 0) {
+      myWalls.splice(idx, 1);
+    } else {
+      if (myWalls.length < 10) myWalls.push({ x, y });
+    }
+    renderSelfBoard();
+  }
+
+  function renderSelfBoard() {
+    const cells = $('board-self').children;
+    for (let c of cells) {
+      const x = parseInt(c.dataset.x);
+      const y = parseInt(c.dataset.y);
+      c.style.background = '';
+      if (x === 0 && y === 5) continue;
+      if (x === 5 && y === 0) continue;
+      if (myWalls.some(w => w.x === x && w.y === y)) {
+        c.style.background = '#e03131';
+      }
+    }
+  }
+
+  function finishCpuSetup() {
+    phase = 'playing';
+    isMyTurn = true;
+    $('btn-ready').classList.add('hidden');
+    oppWalls = [];
+    while (oppWalls.length < 10) {
+      let rx = Math.floor(Math.random() * 6);
+      let ry = Math.floor(Math.random() * 6);
+      if ((rx === 0 && ry === 5) || (rx === 5 && ry === 0)) continue;
+      if (!oppWalls.some(w => w.x === rx && w.y === ry)) oppWalls.push({ x: rx, y: ry });
+    }
+    $('status-bar').textContent = "あなたの番です。相手の盤面をタップして進んでください";
+    showLog("ゲーム開始！あなたのターンです", true);
+    renderOppBoard();
+  }
+
+  function onOppCellClick(x, y) {
+    if (phase !== 'playing' || !isMyTurn) return;
+    const dx = Math.abs(x - myPos.x);
+    const dy = Math.abs(y - myPos.y);
+    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+      if (oppWalls.some(w => w.x === x && w.y === y)) {
+        triggerDame();
+        showLog(`(${x},${y}) は壁でした！移動失敗`, true);
+        isMyTurn = false;
+        setTimeout(cpuTurn, 1200);
+      } else {
+        myPos = { x, y };
+        showLog(`(${x},${y}) に移動しました`);
+        renderOppBoard();
+        if (x === 5 && y === 0) {
+          phase = 'ended';
+          $('status-bar').textContent = "🎉 あなたの勝利です！";
+          showLog("ゴールに到達！あなたの勝ちです！", true);
+        } else {
+          isMyTurn = false;
+          setTimeout(cpuTurn, 800);
+        }
+      }
+    }
+  }
+
+  function renderOppBoard() {
+    const cells = $('board-opponent').children;
+    for (let c of cells) {
+      const x = parseInt(c.dataset.x);
+      const y = parseInt(c.dataset.y);
+      if (x === myPos.x && y === myPos.y) {
+        c.textContent = '👤';
+      } else if (x === 0 && y === 5) {
+        c.textContent = 'S';
+      } else if (x === 5 && y === 0) {
+        c.textContent = 'G';
+      } else {
+        c.textContent = '';
+      }
+    }
+  }
+
+  function cpuTurn() {
+    if (phase !== 'playing') return;
+    let dirs = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
+    let valid = dirs.map(d => ({ x: oppPos.x + d.x, y: oppPos.y + d.y }))
+                    .filter(p => p.x >= 0 && p.x < 6 && p.y >= 0 && p.y < 6);
+    let target = valid[Math.floor(Math.random() * valid.length)];
+    if (myWalls.some(w => w.x === target.x && w.y === target.y)) {
+      showLog(`CPUが(${target.x},${target.y})の壁に衝突！`, true);
+    } else {
+      oppPos = target;
+      showLog(`CPUが(${target.x},${target.y})に移動しました`);
+      if (oppPos.x === 5 && oppPos.y === 0) {
+        phase = 'ended';
+        $('status-bar').textContent = "💀 CPUの勝利です...";
+        showLog("CPUがゴールしました！あなたの負けです", true);
+      }
+    }
+    if (phase === 'playing') {
+      isMyTurn = true;
+      $('status-bar').textContent = "あなたの番です";
+    }
+  }
+</script>
+</body>
+</html>
