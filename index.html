@@ -12,7 +12,7 @@
       background: #ffffff; color: #333; display: flex; flex-direction: column;
       align-items: center; justify-content: flex-start; min-height: 100vh; padding: 10px;
     }
-    .container { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; }
+    .container { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 8px; }
     h1 { text-align: center; font-size: 1.3rem; color: #222; margin-bottom: 4px; letter-spacing: 1px; }
     .card { background: #fff; border-radius: 8px; padding: 12px; border: 1px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     input, select, button {
@@ -25,9 +25,10 @@
     .board-container { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
     .board-label { font-size: 0.85rem; font-weight: bold; margin-bottom: 2px; color: #0275d8; text-align: center; }
 
-    .grid-wrapper { display: grid; grid-template-columns: 24px repeat(6, 1fr); width: 100%; max-width: 320px; }
-    .header-col { text-align: center; font-size: 0.75rem; color: #666; font-weight: bold; height: 20px; line-height: 20px; }
-    .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #666; font-weight: bold; }
+    /* マスを大きくするため幅を拡大 (max-width: 380px) */
+    .grid-wrapper { display: grid; grid-template-columns: 28px repeat(6, 1fr); width: 100%; max-width: 380px; }
+    .header-col { text-align: center; font-size: 0.8rem; color: #666; font-weight: bold; height: 24px; line-height: 24px; }
+    .header-row { display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #666; font-weight: bold; }
 
     .board {
       display: grid; grid-template-columns: repeat(6, 1fr);
@@ -35,31 +36,31 @@
     }
     .cell {
       border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: 0.85rem; cursor: pointer; position: relative; background: #fff;
+      font-weight: bold; font-size: 1rem; cursor: pointer; position: relative; background: #fff;
     }
     .cell.visited { background: #e6f2ff; }
     .cell.start { background: #d3f9d8; color: #2b8a3e; }
     .cell.goal { background: #ffd700; color: #b7791f; }
 
     .dot::after {
-      content: ""; width: 5px; height: 5px; background-color: #333; border-radius: 50%; display: block;
+      content: ""; width: 6px; height: 6px; background-color: #333; border-radius: 50%; display: block;
     }
 
     /* 辺の壁スタイル */
-    .wall-active-top { border-top: 4px solid #d9534f; }
-    .wall-active-bottom { border-bottom: 4px solid #d9534f; }
-    .wall-active-left { border-left: 4px solid #d9534f; }
-    .wall-active-right { border-right: 4px solid #d9534f; }
+    .wall-active-top { border-top: 5px solid #d9534f; }
+    .wall-active-bottom { border-bottom: 5px solid #d9534f; }
+    .wall-active-left { border-left: 5px solid #d9534f; }
+    .wall-active-right { border-right: 5px solid #d9534f; }
 
-    .wall-hit-top { border-top: 4px solid #d9534f !important; }
-    .wall-hit-bottom { border-bottom: 4px solid #d9534f !important; }
-    .wall-hit-left { border-left: 4px solid #d9534f !important; }
-    .wall-hit-right { border-right: 4px solid #d9534f !important; }
+    .wall-hit-top { border-top: 5px solid #d9534f !important; }
+    .wall-hit-bottom { border-bottom: 5px solid #d9534f !important; }
+    .wall-hit-left { border-left: 5px solid #d9534f !important; }
+    .wall-hit-right { border-right: 5px solid #d9534f !important; }
 
-    .wall-miss-top { border-top: 4px solid #5cb85c !important; }
-    .wall-miss-bottom { border-bottom: 4px solid #5cb85c !important; }
-    .wall-miss-left { border-left: 4px solid #5cb85c !important; }
-    .wall-miss-right { border-right: 4px solid #5cb85c !important; }
+    .wall-miss-top { border-top: 5px solid #5cb85c !important; }
+    .wall-miss-bottom { border-bottom: 5px solid #5cb85c !important; }
+    .wall-miss-left { border-left: 5px solid #5cb85c !important; }
+    .wall-miss-right { border-right: 5px solid #5cb85c !important; }
 
     /* 4行分のログ表示エリア */
     .log-box {
@@ -131,8 +132,8 @@
     <div id="status-bar" style="font-size:0.85rem; color:#d9534f; text-align:center; font-weight:bold; margin-bottom:4px;"></div>
 
     <div id="setup-controls" class="hidden" style="text-align:center; margin-bottom:4px;">
-      <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ<br>② 辺をタップして壁を配置 (最大10個)</p>
-      <button id="btn-finish-setup" style="margin-top:4px; background:#2b8a3e;" disabled>配置完了 (0/10)</button>
+      <p style="font-size:0.75rem; color:#555;">① スタート(S)とゴール(G)をタップ<br>② 辺をタップして壁を配置 (最大3個)</p>
+      <button id="btn-finish-setup" style="margin-top:4px; background:#2b8a3e;" disabled>配置完了 (0/3)</button>
     </div>
 
     <div class="board-container">
@@ -232,8 +233,7 @@
   function startCpuMode() {
     mode = 'cpu';
     myName = $('input-name').value.trim() || 'プレイヤー';
-    $('screen-lobby').classList.add('hidden');
-    $('screen-game').classList.remove('hidden');
+    $('screen-lobby').classList.add('hidden');$('screen-game').classList.remove('hidden');
     initGameVariables();
     showLog("CPU対戦を開始しました。");
   }
@@ -245,16 +245,17 @@
     oppWalls = [];
     pHitWalls.clear();
     cpuHitWalls.clear();
+    myPos = { r: 5, c: 5 };
+    oppPos = { r: 0, c: 2 };
     startPos = { r: 5, c: 5 };
     goalPos = { r: 0, c: 0 };
-    myPos = { ...startPos };
-    oppPos = { ...startPos };
     myVisited = Array.from({length: 6}, () => Array(6).fill(false));
     oppVisited = Array.from({length: 6}, () => Array(6).fill(false));
+    myVisited[5][5] = true;
+    oppVisited[0][2] = true;
 
-    $('room-back-btn').classList.add('hidden');
-    $('setup-controls').classList.remove('hidden');
-    updateStatus("【初期設定】スタート(S)の位置をタップしてください");
+    $('room-back-btn').classList.add('hidden');$('setup-controls').classList.remove('hidden');
+    updateStatus("【初期設定】スタート(S)とゴール(G)をタップ指定してください");
     initGridUI();
   }
 
@@ -433,7 +434,7 @@
   function sendSpectatorComment() {
     const text = $('input-comment').value.trim();
     if (!text) return;
-    $('input-comment', '').value = '';
+    $('input-comment').value = '';
     if (isHost) broadcastMessage({ type: 'chat', name: myName, text: text });
     else hostConn.send({ type: 'comment', name: myName, text: text });
   }
@@ -475,14 +476,13 @@
     if (phase === 'setup' && boardType === 'self') {
       if (setupStep === 'start') {
         startPos = { r, c };
-        myPos = { r, c };
         setupStep = 'goal';
         updateStatus("【初期設定】ゴール(G)の位置をタップしてください");
       } else if (setupStep === 'goal') {
         if (r === startPos.r && c === startPos.c) return;
         goalPos = { r, c };
         setupStep = 'walls';
-        updateStatus("【初期設定】辺をタップして壁を配置してください (最大10個)");
+        updateStatus("【初期設定】マスの境界線（辺）をタップして壁を3つ配置してください");
       } else if (setupStep === 'walls') {
         const rect = event.currentTarget.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -512,14 +512,14 @@
     if (idx >= 0) {
       myWalls.splice(idx, 1);
     } else {
-      if (myWalls.length < 10) {
+      if (myWalls.length < 3) {
         myWalls.push({ r1, c1, r2, c2 });
       }
     }
     const count = myWalls.length;
     const btn = $('btn-finish-setup');
-    btn.textContent = `配置完了 (${count}/10)`;
-    if (count > 0) btn.disabled = false;
+    btn.textContent = `配置完了 (${count}/3)`;
+    if (count === 3) btn.disabled = false;
     else btn.disabled = true;
   }
 
@@ -528,42 +528,7 @@
            (w.r1 === r2 && w.c1 === c2 && w.r2 === r1 && w.c1 === c1);
   }
 
-  // スタートからゴールへの経路が存在するかチェック（幅優先探索）
-  function checkPathExists(start, goal, walls) {
-    let visited = Array.from({length: 6}, () => Array(6).fill(false));
-    let queue = [start];
-    visited[start.r][start.c] = true;
-
-    while(queue.length > 0) {
-      let curr = queue.shift();
-      if (curr.r === goal.r && curr.c === goal.c) return true;
-
-      let dirs = [{r:1,c:0},{r:-1,c:0},{r:0,c:1},{r:0,c:-1}];
-      for(let d of dirs) {
-        let nextR = curr.r + d.r;
-        let nextC = curr.c + d.c;
-        if (nextR >= 0 && nextR < 6 && nextC >= 0 && nextC < 6) {
-          if (!visited[nextR][nextC]) {
-            // 壁があるかチェック
-            let hasWall = walls.some(w => isSameEdge(w, curr.r, curr.c, nextR, nextC));
-            if (!hasWall) {
-              visited[nextR][nextC] = true;
-              queue.push({ r: nextR, c: nextC });
-            }
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   function finishSetup() {
-     // 経路チェック
-    if (!checkPathExists(startPos, goalPos, myWalls)) {
-      alert("エラー：スタートからゴールへたどり着く経路がありません！壁の位置を調整してください。");
-      return;
-    }
-
     $('setup-controls').classList.add('hidden');
     myPos = { ...startPos };
     oppPos = { ...startPos };
@@ -572,8 +537,7 @@
 
     if (mode === 'cpu') {
       oppWalls = [];
-      let attempts = 0;
-      while(oppWalls.length < Math.max(3, myWalls.length) && attempts < 100) {
+      while(oppWalls.length < 3) {
         let r1 = Math.floor(Math.random() * 6);
         let c1 = Math.floor(Math.random() * 6);
         let dirs = [{r:1,c:0},{r:0,c:1}];
@@ -582,20 +546,15 @@
         if (r2 < 6 && c2 < 6) {
           if (!oppWalls.some(w => isSameEdge(w, r1, c1, r2, c2))) {
             oppWalls.push({ r1, c1, r2, c2 });
-            // CPU側も経路チェックを満たすか確認（行き止まりなら外す）
-            if (!checkPathExists(startPos, goalPos, oppWalls)) {
-              oppWalls.pop();
-            }
           }
         }
-        attempts++;
       }
       phase = 'playing';
       isMyTurn = true;
       updateStatus("あなたのターン：相手の盤面をタップして進んでください");
       showLog("ゲーム開始！あなたのターンです。");
     }
-    renderBoards();
+        renderBoards();
   }
 
   function attemptMove(to) {
@@ -676,8 +635,7 @@
 
       if (type === 'self') {
         if (myVisited[r][col]) c.classList.add('visited');
-        if (phase !== 'setup' && r === myPos.r && col === myPos.c) { c.textContent = '👤'; }
-        else if (phase === 'setup' && r === startPos.r && col === startPos.c) { c.textContent = '👤'; }
+        if (r === myPos.r && col === myPos.c) { c.textContent = '👤'; }
         else if (!((r === startPos.r && col === startPos.c) || (r === goalPos.r && col === goalPos.c))) {
           c.classList.add('dot');
         }
@@ -719,4 +677,4 @@
   }
 </script>
 </body>
-</html
+</html>
