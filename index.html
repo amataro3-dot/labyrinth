@@ -29,10 +29,24 @@
         }
         .instructions {
             color: #d32f2f;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-align: center;
             margin-bottom: 10px;
             font-weight: bold;
+        }
+        .setting-group {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            background: #f1f8e9;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .setting-group select {
+            padding: 4px;
+            font-size: 0.9rem;
         }
         .btn {
             background-color: #388e3c;
@@ -45,6 +59,9 @@
             font-weight: bold;
             cursor: pointer;
             margin-bottom: 15px;
+        }
+        .btn:active {
+            background-color: #2e7d32;
         }
         .section-title {
             text-align: center;
@@ -100,6 +117,7 @@
             font-size: 1rem;
             box-sizing: border-box;
             user-select: none;
+            cursor: pointer;
         }
         .cell.goal {
             background-color: #ffe082;
@@ -108,6 +126,10 @@
         .cell.start {
             background-color: #c8e6c9;
             color: #2e7d32;
+        }
+        .cell.wall {
+            background-color: #555;
+            color: white;
         }
         .log-box {
             border: 1px solid #ccc;
@@ -126,12 +148,19 @@
     <h1>Labyrinth</h1>
 
     <div class="container">
-        <div class="instructions">
-            【初期設定】スタート(S)とゴール(G)をタップ指定してください<br>
-            <span style="font-size: 0.8rem; font-weight: normal; color: #666;">
-                ① スタート(S)とゴール(G)をタップ<br>
-                ② 辺をタップして壁を配置（最大3個）
-            </span>
+        <div class="setting-group">
+            <label for="wall-count-select">🧱 配置する壁の数:</label>
+            <select id="wall-count-select">
+                <option value="1">1個</option>
+                <option value="2">2個</option>
+                <option value="3" selected>3個</option>
+                <option value="4">4個</option>
+                <option value="5">5個</option>
+            </select>
+        </div>
+
+        <div class="instructions" id="instructions-text">
+            【初期設定】スタート(S)とゴール(G)をタップ指定してください
         </div>
 
         <button class="btn" id="action-btn">配置完了 (0/3)</button>
@@ -145,9 +174,7 @@
                 <div class="rows-label">
                     <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div>
                 </div>
-                <div class="grid-wrapper" id="board-top">
-                    <!-- マス目動的生成 -->
-                </div>
+                <div class="grid-wrapper" id="board-top"></div>
             </div>
         </div>
 
@@ -160,36 +187,146 @@
                 <div class="rows-label">
                     <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div>
                 </div>
-                <div class="grid-wrapper" id="board-bottom">
-                    <!-- マス目動的生成 -->
-                </div>
+                <div class="grid-wrapper" id="board-bottom"></div>
             </div>
         </div>
 
         <div class="log-box" id="log">
-            CPU対戦を開始しました。
+            ゲームを開始しました。壁の数を選んでスタート・ゴールを配置してください。
         </div>
     </div>
 
     <script>
-        // サンプルとして6x6のセルを生成する簡易スクリプト
-        function createGrid(elementId) {
-            const grid = document.getElementById(elementId);
-            for (let i = 0; i < 36; i++) {
-                const cell = document.createElement('div');
+        const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
+        const cols = [1, 2, 3, 4, 5, 6];
+        
+        let maxWalls = 3;
+        let gameState = 'SETUP_SG'; // SETUP_SG -> SETUP_WALLS -> PLAYING
+        let startPos = null;
+        let goalPos = null;
+        let walls = [];
+
+        const wallSelect = document.getElementById('wall-count-select');
+        const actionBtn = document.getElementById('action-btn');
+        const instructionsText = document.getElementById('instructions-text');
+        const logBox = document.getElementById('log');
+
+        wallSelect.addEventListener('change', (e) => {
+            if (gameState === 'SETUP_SG' || gameState === 'SETUP_WALLS') {
+                maxWalls = parseInt(e.target.value);
+                updateUI();
+            }
+        });
+
+        function log(message) {
+            logBox.innerHTML += `<br>${message}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function createBoards() {
+            ['board-top', 'board-bottom'].forEach(id => {
+                const board = document.getElementById(id);
+                board.innerHTML = '';
+                for (let r = 0; r < 6; r++) {
+                    for (let c = 0; c < 6; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.r = r;
+                        cell.dataset.c = c;
+                        cell.addEventListener('click', () => handleCellClick(r, c));
+                        board.appendChild(cell);
+                    }
+                }
+            });
+            renderBoards();
+        }
+
+        function renderBoards() {
+            // ここでは簡易的に下ボードを操作対象として描画
+            const bottomBoard = document.getElementById('board-bottom');
+            Array.from(bottomBoard.children).forEach(cell => {
+                const r = parseInt(cell.dataset.r);
+                const c = parseInt(cell.dataset.c);
+                
                 cell.className = 'cell';
-                if (i === 0) {
-                    cell.classList.add('goal');
-                    cell.textContent = 'G';
-                } else if (i === 35) {
+                cell.textContent = '';
+
+                if (startPos && startPos.r === r && startPos.c === c) {
                     cell.classList.add('start');
                     cell.textContent = 'S';
+                } else if (goalPos && goalPos.r === r && goalPos.c === c) {
+                    cell.classList.add('goal');
+                    cell.textContent = 'G';
+                } else if (walls.some(w => w.r === r && w.c === c)) {
+                    cell.classList.add('wall');
+                    cell.textContent = '■';
                 }
-                grid.appendChild(cell);
+            });
+        }
+
+        function handleCellClick(r, c) {
+            if (gameState === 'SETUP_SG') {
+                if (!startPos) {
+                    startPos = {r, c};
+                    log(`スタート(S)を (${rows[r]}, ${cols[c]}) に設定しました。`);
+                } else if (!goalPos) {
+                    if (startPos.r === r && startPos.c === c) return;
+                    goalPos = {r, c};
+                    log(`ゴール(G)を (${rows[r]}, ${cols[c]}) に設定しました。`);
+                    gameState = 'SETUP_WALLS';
+                    instructionsText.innerHTML = `【壁配置】配置する壁を選んでください（最大${maxWalls}個）`;
+                }
+                renderBoards();
+                updateUI();
+            } else if (gameState === 'SETUP_WALLS') {
+                if ((startPos && startPos.r === r && startPos.c === c) ||
+                    (goalPos && goalPos.r === r && goalPos.c === c)) return;
+
+                const existingIndex = walls.findIndex(w => w.r === r && w.c === c);
+                if (existingIndex >= 0) {
+                    walls.splice(existingIndex, 1);
+                } else {
+                    if (walls.length < maxWalls) {
+                        walls.push({r, c});
+                    } else {
+                        log(`壁は最大${maxWalls}個までです。`);
+                    }
+                }
+                renderBoards();
+                updateUI();
             }
         }
-        createGrid('board-top');
-        createGrid('board-bottom');
+
+        actionBtn.addEventListener('click', () => {
+            if (gameState === 'SETUP_SG') {
+                log('先にスタートとゴールをタップしてください。');
+            } else if (gameState === 'SETUP_WALLS') {
+                if (walls.length === 0) {
+                    log('壁を1つ以上配置してください。');
+                    return;
+                }
+                gameState = 'PLAYING';
+                wallSelect.disabled = true;
+                actionBtn.textContent = 'ゲーム進行中';
+                actionBtn.style.backgroundColor = '#1976d2';
+                instructionsText.innerHTML = '【対戦中】相手の迷路を解き進めてください！';
+                log('初期配置が完了しました。ゲーム開始！');
+            }
+        });
+
+        function updateUI() {
+            if (gameState === 'SETUP_SG') {
+                if (!startPos) {
+                    actionBtn.textContent = 'スタートを配置してください';
+                } else if (!goalPos) {
+                    actionBtn.textContent = 'ゴールを配置してください';
+                }
+            } else if (gameState === 'SETUP_WALLS') {
+                actionBtn.textContent = `配置完了 (${walls.length}/${maxWalls})`;
+            }
+        }
+
+        createBoards();
     </script>
 </body>
 </html>
