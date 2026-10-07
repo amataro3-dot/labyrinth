@@ -6,7 +6,7 @@
     <title>Labyrinth</title>
     <style>
         :root {
-            --cell-size: 55px;
+            --cell-size: 50px;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -30,8 +30,9 @@
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 600px;
+            max-width: 800px;
             width: 100%;
+            box-sizing: border-box;
         }
         .screen.active {
             display: flex;
@@ -70,20 +71,42 @@
         button:hover {
             background-color: #2980b9;
         }
-        button:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
+        button.secondary {
+            background-color: #7f8c8d;
+        }
+        button.secondary:hover {
+            background-color: #636e72;
         }
 
-        /* 盤面スタイル (6x6) */
+        /* 盤面エリア（デュアル盤面用レイアウト） */
+        .boards-wrapper {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .board-pane {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fafafa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e1e4e8;
+        }
+        .board-pane h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #2c3e50;
+        }
         .board-container {
             position: relative;
-            margin: 20px 0;
         }
         .board {
             display: grid;
-            grid-template-columns: 30px repeat(6, var(--cell-size));
-            grid-template-rows: 30px repeat(6, var(--cell-size));
+            grid-template-columns: 25px repeat(6, var(--cell-size));
+            grid-template-rows: 25px repeat(6, var(--cell-size));
             gap: 0;
             background-color: #fff;
             border: 2px solid #333;
@@ -93,74 +116,116 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
             color: #555;
             background-color: #ecf0f1;
         }
         .cell {
             width: var(--cell-size);
             height: var(--cell-size);
-            border: 1px solid #dcdde1;
+            border: 1px solid #dfe4ea;
             box-sizing: border-box;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
             position: relative;
             background-color: #fff;
             cursor: pointer;
+            transition: background 0.1s;
+        }
+        .cell:hover {
+            background-color: #f1f2f6;
         }
         .cell.start {
-            background-color: #d4efdf;
-            color: #27ae60;
+            background-color: #e8f8f5;
         }
         .cell.goal {
-            background-color: #fdebd0;
-            color: #e67e22;
+            background-color: #fef5e7;
         }
-        .cell.player {
-            background-color: #ebf5fb;
-            color: #2980b9;
+        .cell-tag {
+            position: absolute;
+            font-size: 10px;
+            font-weight: bold;
+            top: 2px;
+            left: 3px;
+        }
+        .cell.start .cell-tag { color: #27ae60; }
+        .cell.goal .cell-tag { color: #e67e22; }
+
+        /* 人型アイコン */
+        .player-icon {
+            width: 24px;
+            height: 24px;
+            fill: #2980b9;
+            z-index: 5;
         }
 
-        /* 辺（壁）配置エリア */
+        /* 辺（壁）スタイル：完全にマスの境界線上に配置 */
         .wall-h, .wall-v {
             position: absolute;
-            background-color: transparent;
+            background-color: #2ecc71; /* 未確認/初期は緑 */
             z-index: 10;
-            cursor: pointer;
+            transition: background 0.2s;
         }
         .wall-h {
-            height: 8px;
-            transform: translateY(-4px);
+            height: 6px;
+            transform: translateY(-3px);
+            border-radius: 3px;
         }
         .wall-v {
-            width: 8px;
-            transform: translateX(-4px);
-        }
-        .wall-h:hover, .wall-v:hover {
-            background-color: rgba(52, 152, 219, 0.4);
+            width: 6px;
+            transform: translateX(-3px);
+            border-radius: 3px;
         }
         .wall-active {
-            background-color: #e74c3c !important; /* 赤 */
-        }
-        .wall-revealed-green {
-            background-color: #2ecc71 !important; /* 緑 */
+            background-color: #e74c3c !important; /* 当たった壁・確定した壁は赤 */
         }
 
-        /* フィードバック表示 */
-        #feedback-msg {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 10px 0;
-            min-height: 30px;
-            text-align: center;
+        /* 画面いっぱいの巨大フィードバック演出 */
+        #fullscreen-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: none;
         }
-        .msg-blue { color: #2980b9; }
-        .msg-red { color: #e74c3c; }
+        .feedback-content {
+            font-size: 56px;
+            font-weight: 900;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        /* 〇の中にいけるっ！ */
+        .fb-success {
+            position: relative;
+            color: #2980b9;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 60px;
+            border-radius: 100px;
+            border: 8px solid #3498db;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        /* ☓の左右側にだめっ！ */
+        .fb-fail {
+            color: #e74c3c;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 50px;
+            border-radius: 20px;
+            border: 8px solid #e74c3c;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
 
-        /* チャット・リスト */
         .room-info {
             font-size: 14px;
             color: #666;
@@ -193,9 +258,13 @@
 
     <h1>Labyrinth</h1>
 
-    <!-- 1. ロール・ルーム選択画面 -->
+    <!-- 巨大フィードバック用オーバーレイ -->
+    <div id="fullscreen-overlay">
+        <div id="feedback-box" class="feedback-content"></div>
+    </div>
+    <!-- 1. ルームID入力画面 -->
     <div id="screen-lobby" class="screen active">
-        <h2>ルーム参加</h2>
+        <h2>ルーム入室</h2>
         <div class="form-group">
             <label>プレイヤー名:</label>
             <input type="text" id="input-name" placeholder="名前を入力">
@@ -204,126 +273,163 @@
             <label>ルームID:</label>
             <input type="text" id="input-room" value="room123">
         </div>
-        <div class="form-group">
-            <label>役割:</label>
-            <select id="select-role">
-                <option value="player">対戦 (Player)</option>
-                <option value="spectator">観戦 (Spectator)</option>
-            </select>
-        </div>
-        <button onclick="joinRoom()">ルームに入室する</button>
+        <button onclick="enterLobby()">ルームに入る</button>
     </div>
 
-    <!-- 2. 管理者設定画面 -->
-    <div id="screen-setup" class="screen">
-        <h2>ゲーム設定 (管理者)</h2>
-        <div class="room-info" id="setup-room-info"></div>
+    <!-- 2. ロビー（待機部屋・モード＆役割選択） -->
+    <div id="screen-room-lobby" class="screen">
+        <h2 id="lobby-title">待機ロビー</h2>
+        <div class="room-info" id="lobby-room-info"></div>
+        
         <div class="form-group">
-            <label>壁の数 (5〜15個):</label>
-            <input type="number" id="input-wall-count" min="5" max="15" value="5">
-        </div>
-        <div class="form-group">
-            <label>観戦者からお互いの壁の位置を見えるようにする:</label>
-            <select id="select-spectator-wall">
-                <option value="yes">見える</option>
-                <option value="no" selected>見えない</option>
+            <label>プレイモード:</label>
+            <select id="select-game-mode" onchange="toggleModeSettings()">
+                <option value="pvp">プレイヤー対戦 (Online / Multi)</option>
+                <option value="cpu">コンピュータ対戦 (CPU vs Player)</option>
             </select>
         </div>
-        <button onclick="startSetupPhase()">セットアップ画面へ進む</button>
+
+        <div class="form-group">
+            <label>参加役割:</label>
+            <select id="select-role">
+                <option value="player">対戦プレイヤー (Player)</option>
+                <option value="spectator">観戦者 (Spectator)</option>
+            </select>
+        </div>
+
+        <!-- 管理者専用設定エリア -->
+        <div id="host-settings-area" style="width: 100%; border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 15px; display: none;">
+            <h3 style="font-size: 15px; color: #2c3e50; margin: 0 0 10px 0;">⚙️ 管理者設定</h3>
+            <div class="form-group">
+                <label>壁の数 (5〜15個):</label>
+                <input type="number" id="input-wall-count" min="5" max="15" value="5">
+            </div>
+            <div class="form-group">
+                <label>観戦者に双方の壁の位置を見せる:</label>
+                <select id="select-spectator-wall">
+                    <option value="yes">見せる</option>
+                    <option value="no" selected>見せない</option>
+                </select>
+            </div>
+        </div>
+
+        <button onclick="proceedFromLobby()">ゲームの準備（配置）へ進む</button>
     </div>
 
     <!-- 3. 壁・S・G 配置画面 -->
     <div id="screen-board-setup" class="screen">
         <h2 id="setup-title">スタート・ゴール・壁の配置</h2>
         <p style="font-size: 13px; color: #555; text-align: center;">
-            最初にS(スタート)、次にG(ゴール)を選び、マスの「辺」をクリックして壁（<span id="max-wall-label">5</span>個）を配置してください。
+            最初に「S（スタート）」、次に「G（ゴール）」のマスをクリックし、その後マスの「境界線（辺）」をクリックして相手が解くための壁（<span id="max-wall-label">5</span>個）を配置してください。
         </p>
-        <div class="board-container" id="setup-board-container"></div>
-        <button id="btn-complete-setup" onclick="completeSetup()" disabled>配置完了・ゲーム待機</button>
+        <div class="board-container" id="setup-board-container" style="margin: 15px 0;"></div>
+        <button id="btn-complete-setup" class="secondary" onclick="completeSetup()" disabled>配置完了・ゲーム開始</button>
     </div>
 
-    <!-- 4. ゲームプレイ画面 -->
-    <div id="screen-game" class="screen">
-        <h2 id="game-turn-header">ゲーム画面</h2>
-        <div id="feedback-msg"></div>
-        <div class="board-container" id="game-board-container"></div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button onclick="movePlayer('up')">↑ 上</button>
-            <button onclick="movePlayer('down')">↓ 下</button>
-            <button onclick="movePlayer('left')">← 左</button>
-            <button onclick="movePlayer('right')">→ 右</button>
+    <!-- 4. ゲームプレイ画面（デュアル盤面） -->
+    <div id="screen-game" class="screen" style="max-width: 900px;">
+        <h2 id="game-turn-header" style="margin-bottom: 5px;">ゲーム画面</h2>
+        <div class="boards-wrapper">
+            <!-- 自分が解くべき盤面 -->
+            <div class="board-pane">
+                <h3 id="pane-title-solve">自分が解くべき盤面</h3>
+                <div class="board-container" id="solve-board-container"></div>
+            </div>
+            <!-- 自分が作った盤面 -->
+            <div class="board-pane">
+                <h3>自分が作った盤面（相手用）</h3>
+                <div class="board-container" id="creator-board-container"></div>
+            </div>
         </div>
+        <button class="secondary" style="margin-top: 20px;" onclick="returnToLobby()">ロビーに戻る</button>
     </div>
 
-    <!-- 5. 観戦・チャット画面 (観戦者用) -->
+    <!-- 5. 観戦ルーム画面 -->
     <div id="screen-spectator" class="screen">
         <h2>観戦ルーム</h2>
         <div id="spec-status" style="font-weight: bold; margin-bottom: 10px;"></div>
-        <div class="board-container" id="spec-board-container"></div>
+        <div class="board-container" id="spec-board-container" style="margin: 15px 0;"></div>
         <div class="chat-box" id="chat-messages"></div>
         <div class="chat-input-area">
             <input type="text" id="chat-input" placeholder="チャットを入力...">
             <button onclick="sendChat()" style="margin-top:0;">送信</button>
         </div>
+        <button class="secondary" onclick="returnToLobby()">ロビーに戻る</button>
     </div>
-<script>
+
+    <script>
         let state = {
             name: '',
             roomId: '',
-            role: '',
-            isHost: true,
+            gameMode: 'pvp',
+            role: 'player',
+            isHost: true, // 最初に部屋に入った人を簡易的にホスト(管理者)とする
             wallCount: 5,
             spectatorCanSeeWalls: false,
             gridSize: 6,
-            startPos: null,
-            goalPos: null,
-            walls: [],
-            currentPos: null,
+            
+            // プレイヤー自身が解く盤面の状態（相手が作った壁を配置される想定、ここではモックとして自己完結またはCPU対戦用に保持）
+            mySolveStart: {r: 0, c: 0},
+            mySolveGoal: {r: 5, c: 5},
+            mySolveWalls: [],
+            currentPos: {r: 0, c: 0},
+            
+            // プレイヤーが自分が作る盤面
+            myCreatorStart: null,
+            myCreatorGoal: null,
+            myCreatorWalls: [],
+            
             suddenDeath: false,
             gameOver: false,
             hitWalls: [],
             chats: []
         };
 
+        const svgPlayerIcon = `<svg class="player-icon" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>`;
+
         function switchScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
         }
 
-        function joinRoom() {
+        function enterLobby() {
             const name = document.getElementById('input-name').value.trim();
             const roomId = document.getElementById('input-room').value.trim();
-            const role = document.getElementById('select-role').value;
-
             if (!name) {
                 alert('プレイヤー名を入力してください。');
                 return;
             }
-
             state.name = name;
             state.roomId = roomId;
-            state.role = role;
 
-            if (state.isHost && role === 'player') {
-                document.getElementById('setup-room-info').innerText = `ルームID: ${roomId} (管理者: ${name})`;
-                switchScreen('screen-setup');
-            } else {
-                alert('ルームに入室しました！配置フェーズへ進みます。');
-                initBoardSetup();
-            }
+            document.getElementById('lobby-room-info').innerText = `ルームID: ${roomId} | プレイヤー: ${name} (${state.isHost ? '管理者' : '参加者'})`;
+            document.getElementById('host-settings-area').style.display = state.isHost ? 'block' : 'none';
+            switchScreen('screen-room-lobby');
         }
 
-        function startSetupPhase() {
-            const wc = parseInt(document.getElementById('input-wall-count').value);
-            if (isNaN(wc) || wc < 5 || wc > 15) {
-                alert('壁の数は5〜15個の間で指定してください。');
-                return;
+        function toggleModeSettings() {
+            state.gameMode = document.getElementById('select-game-mode').value;
+        }
+
+        function proceedFromLobby() {
+            state.role = document.getElementById('select-role').value;
+            if (state.isHost) {
+                const wc = parseInt(document.getElementById('input-wall-count').value);
+                if (isNaN(wc) || wc < 5 || wc > 15) {
+                    alert('壁の数は5〜15個の間で指定してください。');
+                    return;
+                }
+                state.wallCount = wc;
+                state.spectatorCanSeeWalls = document.getElementById('select-spectator-wall').value === 'yes';
             }
-            state.wallCount = wc;
-            state.spectatorCanSeeWalls = document.getElementById('select-spectator-wall').value === 'yes';
             initBoardSetup();
         }
 
+        function returnToLobby() {
+            enterLobby();
+        }
+
+        // --- 配置フェーズロジック ---
         let setupStep = 'start';
         let tempStart = null;
         let tempGoal = null;
@@ -338,6 +444,7 @@
             tempWalls = [];
             document.getElementById('setup-title').innerText = 'スタート(S)の位置を選択してください';
             document.getElementById('btn-complete-setup').disabled = true;
+            document.getElementById('btn-complete-setup').className = 'secondary';
             renderSetupBoard();
         }
 
@@ -348,9 +455,7 @@
             board.className = 'board';
 
             board.appendChild(createLabel(''));
-            for (let c = 0; c < state.gridSize; c++) {
-                board.appendChild(createLabel(c + 1));
-            }
+            for (let c = 0; c < state.gridSize; c++) board.appendChild(createLabel(c + 1));
 
             const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
             for (let r = 0; r < state.gridSize; r++) {
@@ -360,16 +465,17 @@
                     cell.className = 'cell';
                     if (tempStart && tempStart.r === r && tempStart.c === c) {
                         cell.classList.add('start');
-                        cell.innerText = 'S';
+                        cell.innerHTML = '<span class="cell-tag">S</span>';
                     } else if (tempGoal && tempGoal.r === r && tempGoal.c === c) {
                         cell.classList.add('goal');
-                        cell.innerText = 'G';
+                        cell.innerHTML = '<span class="cell-tag">G</span>';
                     }
-                    cell.onclick = () => handleCellClick(r, c);
+                    cell.onclick = () => handleSetupCellClick(r, c);
                     board.appendChild(cell);
                 }
             }
 
+            // 辺（壁）の描画：マスの境界線上にぴったり配置
             for (let r = 0; r <= state.gridSize; r++) {
                 for (let c = 0; c < state.gridSize; c++) {
                     const wallH = document.createElement('div');
@@ -377,10 +483,10 @@
                     if (tempWalls.some(w => w.type === 'h' && w.r === r && w.c === c)) {
                         wallH.classList.add('wall-active');
                     }
-                    wallH.style.top = `${r * 55}px`;
-                    wallH.style.left = `${30 + c * 55}px`;
-                    wallH.style.width = '55px';
-                    wallH.onclick = (e) => { e.stopPropagation(); handleWallClick('h', r, c); };
+                    wallH.style.top = `${r * 50}px`;
+                    wallH.style.left = `${25 + c * 50}px`;
+                    wallH.style.width = '50px';
+                    wallH.onclick = (e) => { e.stopPropagation(); handleSetupWallClick('h', r, c); };
                     board.appendChild(wallH);
                 }
             }
@@ -392,10 +498,10 @@
                     if (tempWalls.some(w => w.type === 'v' && w.r === r && w.c === c)) {
                         wallV.classList.add('wall-active');
                     }
-                    wallV.style.top = `${30 + r * 55}px`;
-                    wallV.style.left = `${c * 55}px`;
-                    wallV.style.height = '55px';
-                    wallV.onclick = (e) => { e.stopPropagation(); handleWallClick('v', r, c); };
+                    wallV.style.top = `${25 + r * 50}px`;
+                    wallV.style.left = `${c * 50}px`;
+                    wallV.style.height = '50px';
+                    wallV.onclick = (e) => { e.stopPropagation(); handleSetupWallClick('v', r, c); };
                     board.appendChild(wallV);
                 }
             }
@@ -409,7 +515,7 @@
             return div;
         }
 
-        function handleCellClick(r, c) {
+        function handleSetupCellClick(r, c) {
             if (setupStep === 'start') {
                 tempStart = {r, c};
                 setupStep = 'goal';
@@ -422,12 +528,12 @@
                 }
                 tempGoal = {r, c};
                 setupStep = 'walls';
-                document.getElementById('setup-title').innerText = `壁を配置してください (0 / ${state.wallCount}個)`;
+                document.getElementById('setup-title').innerText = `相手用の壁を配置してください (0 / ${state.wallCount}個)`;
                 renderSetupBoard();
             }
         }
 
-        function handleWallClick(type, r, c) {
+        function handleSetupWallClick(type, r, c) {
             if (setupStep !== 'walls') return;
             const index = tempWalls.findIndex(w => w.type === type && w.r === r && w.c === c);
             if (index > -1) {
@@ -439,16 +545,30 @@
                 }
                 tempWalls.push({type, r, c});
             }
-            document.getElementById('setup-title').innerText = `壁を配置してください (${tempWalls.length} / ${state.wallCount}個)`;
+            document.getElementById('setup-title').innerText = `相手用の壁を配置してください (${tempWalls.length} / ${state.wallCount}個)`;
             renderSetupBoard();
-            document.getElementById('btn-complete-setup').disabled = (tempWalls.length !== state.wallCount);
+            
+            const btn = document.getElementById('btn-complete-setup');
+            if (tempWalls.length === state.wallCount) {
+                btn.disabled = false;
+                btn.className = '';
+            } else {
+                btn.disabled = true;
+                btn.className = 'secondary';
+            }
         }
 
         function completeSetup() {
-            state.startPos = tempStart;
-            state.goalPos = tempGoal;
-            state.walls = tempWalls;
-            state.currentPos = { ...tempStart };
+            state.myCreatorStart = tempStart;
+            state.myCreatorGoal = tempGoal;
+            state.myCreatorWalls = tempWalls;
+
+            // 自分が解く盤面の初期設定（CPU対戦や一人用デモの場合は自動生成またはミラー、ここではダミー壁を自動生成してセット）
+            state.mySolveStart = {r: 0, c: 0};
+            state.mySolveGoal = {r: 5, c: 5};
+            generateRandomSolveWalls();
+
+            state.currentPos = { ...state.mySolveStart };
             state.hitWalls = [];
             state.suddenDeath = false;
             state.gameOver = false;
@@ -459,23 +579,40 @@
                 initGameScreen();
             }
         }
+
+        function generateRandomSolveWalls() {
+            // 自分が解くべき盤面用にランダムな壁を生成（プレイを即時試せるようにするため）
+            state.mySolveWalls = [];
+            while (state.mySolveWalls.length < state.wallCount) {
+                const type = Math.random() < 0.5 ? 'h' : 'v';
+                const r = Math.floor(Math.random() * (type === 'h' ? 7 : 6));
+                const c = Math.floor(Math.random() * (type === 'h' ? 6 : 7));
+                if (!state.mySolveWalls.some(w => w.type === type && w.r === r && w.c === c)) {
+                    state.mySolveWalls.push({type, r, c});
+                }
+            }
+        }
+        // --- ゲームプレイ画面（デュアル盤面 ＆ 直接タップ移動） ---
         function initGameScreen() {
             switchScreen('screen-game');
-            document.getElementById('game-turn-header').innerText = `ターン: ${state.name} の番`;
-            document.getElementById('feedback-msg').innerText = '';
-            renderGameBoard();
+            document.getElementById('pane-title-solve').innerText = `${state.name} が解くべき盤面`;
+            renderDualBoards();
         }
 
-        function renderGameBoard() {
-            const container = document.getElementById('game-board-container');
+        function renderDualBoards() {
+            renderSolveBoard();
+            renderCreatorBoard();
+        }
+
+        // 1. 自分が解くべき盤面（直接タップで移動可能）
+        function renderSolveBoard() {
+            const container = document.getElementById('solve-board-container');
             container.innerHTML = '';
             const board = document.createElement('div');
             board.className = 'board';
 
             board.appendChild(createLabel(''));
-            for (let c = 0; c < state.gridSize; c++) {
-                board.appendChild(createLabel(c + 1));
-            }
+            for (let c = 0; c < state.gridSize; c++) board.appendChild(createLabel(c + 1));
 
             const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
             for (let r = 0; r < state.gridSize; r++) {
@@ -483,125 +620,189 @@
                 for (let c = 0; c < state.gridSize; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    if (state.startPos.r === r && state.startPos.c === c && !state.gameOver) {
+                    
+                    if (state.mySolveStart.r === r && state.mySolveStart.c === c && !state.gameOver) {
                         cell.classList.add('start');
-                        cell.innerText = 'S';
+                        cell.innerHTML = '<span class="cell-tag">S</span>';
                     }
-                    if (state.goalPos.r === r && state.goalPos.c === c) {
+                    if (state.mySolveGoal.r === r && state.mySolveGoal.c === c) {
                         cell.classList.add('goal');
-                        cell.innerText = 'G';
+                        cell.innerHTML = '<span class="cell-tag">G</span>';
                     }
                     if (state.currentPos.r === r && state.currentPos.c === c) {
-                        cell.classList.add('player');
-                        cell.innerText = 'P';
+                        cell.innerHTML += svgPlayerIcon; // 人型アイコン
+                    }
+
+                    // マスを直接タップして移動を試みる
+                    cell.onclick = () => tryMoveToCell(r, c);
+                    board.appendChild(cell);
+                }
+            }
+
+            // 壁の描画（未確認は緑、当たった壁は赤。ゲームオーバー時は全表示）
+            state.mySolveWalls.forEach(w => {
+                const wallDiv = document.createElement('div');
+                if (w.type === 'h') {
+                    wallDiv.className = 'wall-h';
+                    wallDiv.style.top = `${w.r * 50}px`;
+                    wallDiv.style.left = `${25 + w.c * 50}px`;
+                    wallDiv.style.width = '50px';
+                } else {
+                    wallDiv.className = 'wall-v';
+                    wallDiv.style.top = `${25 + r * 50}px`; // Fix offset
+                    wallDiv.style.left = `${w.c * 50}px`;
+                    wallDiv.style.height = '50px';
+                }
+                // 位置修正の調整用再適用
+                if (w.type === 'v') {
+                    wallDiv.style.top = `${w.r * 50}px`;
+                }
+
+                if (state.gameOver) {
+                    const isHit = state.hitWalls.some(hw => hw.type === w.type && hw.r === w.r && hw.c === w.c);
+                    if (isHit) wallDiv.classList.add('wall-active'); // 赤
+                }
+                board.appendChild(wallDiv);
+            });
+
+            container.appendChild(board);
+        }
+
+        // 2. 自分が作った盤面（相手用）
+        function renderCreatorBoard() {
+            const container = document.getElementById('creator-board-container');
+            container.innerHTML = '';
+            const board = document.createElement('div');
+            board.className = 'board';
+
+            board.appendChild(createLabel(''));
+            for (let c = 0; c < state.gridSize; c++) board.appendChild(createLabel(c + 1));
+
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+            for (let r = 0; r < state.gridSize; r++) {
+                board.appendChild(createLabel(cols[r]));
+                for (let c = 0; c < state.gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (state.myCreatorStart && state.myCreatorStart.r === r && state.myCreatorStart.c === c) {
+                        cell.classList.add('start');
+                        cell.innerHTML = '<span class="cell-tag">S</span>';
+                    }
+                    if (state.myCreatorGoal && state.myCreatorGoal.r === r && state.myCreatorGoal.c === c) {
+                        cell.classList.add('goal');
+                        cell.innerHTML = '<span class="cell-tag">G</span>';
                     }
                     board.appendChild(cell);
                 }
             }
 
-            state.walls.forEach(w => {
+            state.myCreatorWalls.forEach(w => {
                 const wallDiv = document.createElement('div');
+                wallDiv.className = 'wall-h wall-active'; // 自分が作った壁は赤で固定表示
                 if (w.type === 'h') {
-                    wallDiv.className = 'wall-h';
-                    wallDiv.style.top = `${w.r * 55}px`;
-                    wallDiv.style.left = `${30 + w.c * 55}px`;
-                    wallDiv.style.width = '55px';
+                    wallDiv.style.top = `${w.r * 50}px`;
+                    wallDiv.style.left = `${25 + w.c * 50}px`;
+                    wallDiv.style.width = '50px';
                 } else {
-                    wallDiv.className = 'wall-v';
-                    wallDiv.style.top = `${30 + w.r * 55}px`;
-                    wallDiv.style.left = `${w.c * 55}px`;
-                    wallDiv.style.height = '55px';
-                }
-
-                if (state.gameOver) {
-                    const isHit = state.hitWalls.some(hw => hw.type === w.type && hw.r === w.r && hw.c === w.c);
-                    if (isHit) {
-                        wallDiv.classList.add('wall-active');
-                    } else {
-                        wallDiv.classList.add('wall-revealed-green');
-                    }
+                    wallDiv.className = 'wall-v wall-active';
+                    wallDiv.style.top = `${w.r * 50}px`;
+                    wallDiv.style.left = `${w.c * 50}px`;
+                    wallDiv.style.height = '50px';
                 }
                 board.appendChild(wallDiv);
             });
+
             container.appendChild(board);
         }
 
-        function movePlayer(direction) {
+        // 直接タップ移動の判定（隣接する上下左右のマスのみ移動可能）
+        function tryMoveToCell(targetR, targetC) {
             if (state.gameOver) return;
 
-            let newR = state.currentPos.r;
-            let newC = state.currentPos.c;
-            let wallCheck = false;
+            const curR = state.currentPos.r;
+            const curC = state.currentPos.c;
 
-            if (direction === 'up') {
-                if (newR > 0) {
-                    if (state.walls.some(w => w.type === 'h' && w.r === newR && w.c === newC)) wallCheck = true;
-                    else newR--;
-                } else { wallCheck = true; }
-            } else if (direction === 'down') {
-                if (newR < state.gridSize - 1) {
-                    if (state.walls.some(w => w.type === 'h' && w.r === newR + 1 && w.c === newC)) wallCheck = true;
-                    else newR++;
-                } else { wallCheck = true; }
-            } else if (direction === 'left') {
-                if (newC > 0) {
-                    if (state.walls.some(w => w.type === 'v' && w.r === newR && w.c === newC)) wallCheck = true;
-                    else newC--;
-                } else { wallCheck = true; }
-            } else if (direction === 'right') {
-                if (newC < state.gridSize - 1) {
-                    if (state.walls.some(w => w.type === 'v' && w.r === newR && w.c === newC + 1)) wallCheck = true;
-                    else newC++;
-                } else { wallCheck = true; }
+            // 隣接マス（上下左右 1マスのみ）かチェック
+            const dr = Math.abs(targetR - curR);
+            const dc = Math.abs(targetC - curC);
+            if ((dr + dc) !== 1) {
+                return; // 隣接していない場所は無視
             }
 
-            const msgElem = document.getElementById('feedback-msg');
+            // 壁の有無をチェック
+            let wallBlocked = false;
+            let hitWallObj = null;
 
-            if (wallCheck) {
-                msgElem.className = 'msg-red';
-                msgElem.innerText = '☓(だめっ！)';
-                recordHitWall(direction, state.currentPos.r, state.currentPos.c);
+            if (targetR < curR) {
+                // 上へ移動
+                wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR && w.c === curC);
+                hitWallObj = { type: 'h', r: curR, c: curC };
+            } else if (targetR > curR) {
+                // 下へ移動
+                wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR + 1 && w.c === curC);
+                hitWallObj = { type: 'h', r: curR + 1, c: curC };
+            } else if (targetC < curC) {
+                // 左へ移動
+                wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC);
+                hitWallObj = { type: 'v', r: curR, c: curC };
+            } else if (targetC > curC) {
+                // 右へ移動
+                wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC + 1);
+                hitWallObj = { type: 'v', r: curR, c: curC + 1 };
+            }
+
+            if (wallBlocked) {
+                showFullscreenFeedback('fail');
+                if (!state.hitWalls.some(hw => hw.type === hitWallObj.type && hw.r === hitWallObj.r && hw.c === hitWallObj.c)) {
+                    state.hitWalls.push(hitWallObj);
+                }
             } else {
-                msgElem.className = 'msg-blue';
-                msgElem.innerText = '〇(いけるっ！)';
-                state.currentPos = { r: newR, c: newC };
+                showFullscreenFeedback('success');
+                state.currentPos = { r: targetR, c: targetC };
 
-                if (state.currentPos.r === state.goalPos.r && state.currentPos.c === state.goalPos.c) {
+                // ゴール判定
+                if (state.currentPos.r === state.mySolveGoal.r && state.currentPos.c === state.mySolveGoal.c) {
                     if (!state.suddenDeath) {
                         state.suddenDeath = true;
-                        msgElem.className = 'msg-red';
-                        msgElem.innerText = 'サドンデス！クリア出来たら引き分け！！';
-                        setTimeout(() => { alert('ゴール到達！サドンデス発生：後攻プレイヤーのターンです！'); }, 100);
+                        setTimeout(() => {
+                            alert('ゴール到達！サドンデス発生：クリア出来たら引き分け！！');
+                        }, 300);
                     } else {
                         state.gameOver = true;
-                        msgElem.className = 'msg-red';
-                        msgElem.innerText = '引き分け！！';
-                        alert('後攻もクリアしました！引き分けです！');
-                        renderGameBoard();
+                        setTimeout(() => {
+                            alert('後攻もクリアしました！引き分けです！');
+                            renderDualBoards();
+                        }, 300);
                         return;
                     }
                 }
             }
-            renderGameBoard();
+            renderDualBoards();
         }
 
-        function recordHitWall(dir, r, c) {
-            let targetWall = null;
-            if (dir === 'up') targetWall = { type: 'h', r: r, c: c };
-            if (dir === 'down') targetWall = { type: 'h', r: r + 1, c: c };
-            if (dir === 'left') targetWall = { type: 'v', r: r, c: c };
-            if (dir === 'right') targetWall = { type: 'v', r: r, c: c + 1 };
-
-            if (targetWall && state.walls.some(w => w.type === targetWall.type && w.r === targetWall.r && w.c === targetWall.c)) {
-                if (!state.hitWalls.some(hw => hw.type === targetWall.type && hw.r === targetWall.r && hw.c === targetWall.c)) {
-                    state.hitWalls.push(targetWall);
-                }
+        // 画面いっぱいの巨大アニメーション演出
+        function showFullscreenFeedback(type) {
+            const overlay = document.getElementById('fullscreen-overlay');
+            const box = document.getElementById('feedback-box');
+            
+            overlay.style.display = 'flex';
+            if (type === 'success') {
+                box.className = 'feedback-content';
+                box.innerHTML = `<div class="fb-success">〇の中 「いけるっ！」</div>`;
+            } else {
+                box.className = 'feedback-content';
+                box.innerHTML = `<div class="fb-fail">だめっ！ ☓ だめっ！</div>`;
             }
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 700);
         }
 
+        // --- 観戦者画面 ---
         function initSpectatorScreen() {
             switchScreen('screen-spectator');
-            document.getElementById('spec-status').innerText = `観戦中 (${state.roomId})`;
+            document.getElementById('spec-status').innerText = `観戦ルーム (${state.roomId})`;
             renderSpectatorBoard();
         }
 
@@ -624,18 +825,18 @@
             }
 
             if (state.spectatorCanSeeWalls) {
-                state.walls.forEach(w => {
+                state.myCreatorWalls.forEach(w => {
                     const wallDiv = document.createElement('div');
+                    wallDiv.className = 'wall-h wall-active';
                     if (w.type === 'h') {
-                        wallDiv.className = 'wall-h wall-active';
-                        wallDiv.style.top = `${w.r * 55}px`;
-                        wallDiv.style.left = `${30 + w.c * 55}px`;
-                        wallDiv.style.width = '55px';
+                        wallDiv.style.top = `${w.r * 50}px`;
+                        wallDiv.style.left = `${25 + w.c * 50}px`;
+                        wallDiv.style.width = '50px';
                     } else {
                         wallDiv.className = 'wall-v wall-active';
-                        wallDiv.style.top = `${30 + w.r * 55}px`;
-                        wallDiv.style.left = `${w.c * 55}px`;
-                        wallDiv.style.height = '55px';
+                        wallDiv.style.top = `${w.r * 50}px`;
+                        wallDiv.style.left = `${w.c * 50}px`;
+                        wallDiv.style.height = '50px';
                     }
                     board.appendChild(wallDiv);
                 });
