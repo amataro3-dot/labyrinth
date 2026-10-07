@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Labyrinth</title>
+    <title>Labyrinth - Complete Edition</title>
     <style>
         :root {
             --cell-size: 36px;
@@ -134,10 +134,7 @@
             justify-content: center;
             position: relative;
             background-color: #fff;
-            cursor: pointer;
-            transition: background 0.1s;
         }
-        .cell:hover { background-color: #f1f2f6; }
         .cell.start { background-color: #e8f8f5; }
         .cell.goal { background-color: #fef5e7; }
         
@@ -171,44 +168,69 @@
         .wall-h {
             height: 4px;
             transform: translateY(-2px);
+            cursor: pointer;
         }
         .wall-v {
             width: 4px;
             transform: translateX(-2px);
+            cursor: pointer;
         }
         .wall-hit {
             background-color: #e74c3c !important;
         }
 
-        /* 画面いっぱいの巨大シンボル / サドンデス / 勝利演出オーバーレイ */
+        /* 方向選択コントローラー（壁にぶつかるまで進むための操作パネル） */
+        .dir-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 44px);
+            grid-template-rows: repeat(3, 44px);
+            gap: 4px;
+            margin: 6px 0;
+        }
+        .dir-btn {
+            background-color: #34495e;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-top: 0;
+            padding: 0;
+        }
+        .dir-btn:hover { background-color: #2c3e50; }
+        .dir-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .dir-up { grid-column: 2; grid-row: 1; }
+        .dir-left { grid-column: 1; grid-row: 2; }
+        .dir-right { grid-column: 3; grid-row: 2; }
+        .dir-down { grid-column: 2; grid-row: 3; }
+
+        /* 全画面オーバーレイ（タップで消去可能） */
         #fullscreen-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.5);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            pointer-events: none;
+            cursor: pointer;
         }
         .feedback-symbol {
             font-size: 120px;
             font-weight: 900;
             line-height: 1;
-            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             text-shadow: 0 8px 25px rgba(0,0,0,0.3);
             text-align: center;
             padding: 20px;
         }
         .fb-circle { color: #2980b9; }
         .fb-cross { color: #e74c3c; } /* 鮮やかな赤字の☓ */
-        .fb-sudden { color: #f1c40f; font-size: 50px; background: rgba(0,0,0,0.7); border-radius: 12px; }
-        .fb-win { color: #2ecc71; font-size: 45px; background: rgba(0,0,0,0.8); border-radius: 12px; }
-
-        @keyframes popIn {
-            0% { transform: scale(0.3); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        .fb-sudden { color: #f1c40f; font-size: 45px; background: rgba(0,0,0,0.8); border-radius: 12px; padding: 30px; }
+        .fb-win { color: #2ecc71; font-size: 40px; background: rgba(0,0,0,0.85); border-radius: 12px; padding: 30px; }
 
         /* ログとチャット統合エリア ＋ 横の全履歴ボタン */
         .log-chat-wrapper {
@@ -299,13 +321,15 @@
         .chat-input-row button { padding: 6px 12px; margin-top: 0; font-size: 12px; }
 
         .room-info { font-size: 12px; color: #666; margin-bottom: 6px; }
+        .error-msg { color: #e74c3c; font-size: 12px; font-weight: bold; margin-top: 4px; text-align: center; }
     </style>
 </head>
 <body>
 
     <h1>Labyrinth</h1>
 
-    <div id="fullscreen-overlay">
+    <!-- タップで消せる全画面オーバーレイ -->
+    <div id="fullscreen-overlay" onclick="handleOverlayClick()">
         <div id="feedback-symbol-box" class="feedback-symbol"></div>
     </div>
 
@@ -372,17 +396,18 @@
         <button onclick="proceedFromLobby()">配置フェーズへ進む</button>
     </div>
 
-    <!-- 3. スタート・ゴール・壁配置画面 -->
+    <!-- 3. スタート・ゴール・壁配置画面（バリデーション付き） -->
     <div id="screen-board-setup" class="screen">
         <h2 id="setup-title" style="font-size: 16px;">スタート・ゴール・壁の配置</h2>
         <p style="font-size: 11px; color: #555; text-align: center; margin: 4px 0;">
             S、Gを配置後、境界線の線（<span style="color:#2ecc71; font-weight:bold;">緑</span>）をクリックして壁を配置（<span id="max-wall-label">5</span>個）
         </p>
         <div class="board-container" id="setup-board-container" style="margin: 6px 0;"></div>
+        <div id="setup-error-box" class="error-msg"></div>
         <button id="btn-complete-setup" class="secondary" onclick="completeSetup()" disabled>配置完了・ゲーム開始</button>
     </div>
 
-    <!-- 4. ゲームプレイ画面 -->
+    <!-- 4. ゲームプレイ画面（壁にぶつかるまで進むコントローラー対応） -->
     <div id="screen-game" class="screen" style="max-width: 900px;">
         <h2 id="game-turn-header" style="margin: 0 0 4px 0; font-size: 16px;">ゲーム進行中</h2>
         
@@ -393,11 +418,19 @@
                     <h3 id="pane-title-solve">自分が解く盤面</h3>
                     <div class="board-container" id="solve-board-container"></div>
                 </div>
-                <!-- 自分が作った盤面（相手の現在位置を表示） -->
+                <!-- 自分が作った盤面（相手の位置を表示） -->
                 <div class="board-pane">
                     <h3>自分が作った盤面 (相手の位置)</h3>
                     <div class="board-container" id="creator-board-container"></div>
                 </div>
+            </div>
+
+            <!-- 方向選択パネル（壁にぶつかるまで一気に進む1ターン操作） -->
+            <div class="dir-controls" id="player-dir-controls">
+                <button class="dir-btn dir-up" onclick="slideMove('up')">▲</button>
+                <button class="dir-btn dir-left" onclick="slideMove('left')">◀</button>
+                <button class="dir-btn dir-right" onclick="slideMove('right')">▶</button>
+                <button class="dir-btn dir-down" onclick="slideMove('down')">▼</button>
             </div>
 
             <!-- ログとチャット統合エリア ＋ 横の全履歴ボタン -->
@@ -408,7 +441,7 @@
                 </div>
             </div>
 
-            <!-- チャット入力（観戦者のみ使用可能） -->
+            <!-- チャット入力（観戦者用） -->
             <div class="chat-input-row" id="game-chat-input-area" style="display: none;">
                 <input type="text" id="game-chat-input" placeholder="観戦チャットを入力...">
                 <button onclick="sendChat()" style="margin-top:0;">送信</button>
@@ -433,7 +466,6 @@
             mySolveWalls: [],
             currentPos: {r: 0, c: 0},
             
-            // 相手（CPUや対戦相手）の解く盤面データ（自分が作った盤面に対応）
             opponentPos: {r: 0, c: 0},
             opponentStart: {r: 0, c: 0},
             opponentGoal: {r: 5, c: 5},
@@ -442,13 +474,13 @@
             myCreatorGoal: null,
             myCreatorWalls: [],
             
-            isMyTurn: true, // 先攻後攻ランダムで決定される
-            turnOrder: 'my', // 'my' または 'opponent'
+            isMyTurn: true,
             suddenDeath: false,
-            suddenDeathPlayer: null, // 最初にゴールしたプレイヤー
+            suddenDeathPlayer: null,
             gameOver: false,
             hitWalls: [],
-            logs: []
+            logs: [],
+            waitingForOverlayTap: false
         };
 
         const svgPlayerIcon = `<svg class="player-icon" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>`;
@@ -493,6 +525,7 @@
             tempGoal = null;
             tempWalls = [];
             document.getElementById('setup-title').innerText = 'スタート(S)の位置を選択';
+            document.getElementById('setup-error-box').innerText = '';
             document.getElementById('btn-complete-setup').disabled = true;
             document.getElementById('btn-complete-setup').className = 'secondary';
             renderSetupBoard();
@@ -554,6 +587,7 @@
                 }
             }
             container.appendChild(board);
+            validateCurrentSetup();
         }
 
         function createLabel(text) {
@@ -589,17 +623,62 @@
             }
             document.getElementById('setup-title').innerText = `壁を配置 (${tempWalls.length}/${state.wallCount})`;
             renderSetupBoard();
-
-            const btn = document.getElementById('btn-complete-setup');
-            if (tempWalls.length === state.wallCount) {
-                btn.disabled = false;
-                btn.className = '';
-            } else {
-                btn.disabled = true;
-                btn.className = 'secondary';
-            }
         }
 
+        // ゴール到達可能か（ソルバビリティ）を判定するBFSバリデーション
+        function isMazeSolvable(start, goal, walls, size) {
+            const queue = [start];
+            const visited = Array.from({length: size}, () => Array(size).fill(false));
+            visited[start.r][start.c] = true;
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                if (curr.r === goal.r && curr.c === goal.c) return true;
+
+                const dirs = [
+                    {r: -1, c: 0, type: 'h', wallR: curr.r, wallC: curr.c}, // 上
+                    {r: 1, c: 0, type: 'h', wallR: curr.r + 1, wallC: curr.c}, // 下
+                    {r: 0, c: -1, type: 'v', wallR: curr.r, wallC: curr.c}, // 左
+                    {r: 0, c: 1, type: 'v', wallR: curr.r, wallC: curr.c + 1} // 右
+                ];
+
+                for (const d of dirs) {
+                    const nextR = curr.r + d.r;
+                    const nextC = curr.c + d.c;
+                    if (nextR >= 0 && nextR < size && nextC >= 0 && nextC < size && !visited[nextR][nextC]) {
+                        const hasWall = walls.some(w => w.type === d.type && w.r === d.wallR && w.c === d.wallC);
+                        if (!hasWall) {
+                            visited[nextR][nextC] = true;
+                            queue.push({r: nextR, c: nextC});
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function validateCurrentSetup() {
+            const errorBox = document.getElementById('setup-error-box');
+            const btn = document.getElementById('btn-complete-setup');
+
+            if (tempWalls.length < state.wallCount || !tempStart || !tempGoal) {
+                errorBox.innerText = '';
+                btn.disabled = true;
+                btn.className = 'secondary';
+                return;
+            }
+
+            const solvable = isMazeSolvable(tempStart, tempGoal, tempWalls, state.gridSize);
+            if (!solvable) {
+                errorBox.innerText = '⚠️ 警告: この配置ではゴールにたどり着けません！壁や配置を変更してください。';
+                btn.disabled = true;
+                btn.className = 'secondary';
+            } else {
+                errorBox.innerText = '✅ ゴール到達可能です！';
+                btn.disabled = false;
+                btn.className = '';
+            }
+        }
         function completeSetup() {
             state.myCreatorStart = tempStart;
             state.myCreatorGoal = tempGoal;
@@ -618,8 +697,8 @@
             state.suddenDeath = false;
             state.suddenDeathPlayer = null;
             state.gameOver = false;
+            state.waitingForOverlayTap = false;
 
-            // 先攻後攻をランダムで決定 (true = 自分の先攻, false = 相手の先攻)
             state.isMyTurn = Math.random() < 0.5;
             state.logs = [`[システム] ゲーム開始！壁の数は ${state.wallCount} 個です。`];
             if (state.isMyTurn) {
@@ -637,31 +716,36 @@
 
             initGameScreen();
 
-            // 相手先攻の場合はCPUターンを即座に開始
             if (!state.isMyTurn && state.gameMode === 'cpu') {
                 setTimeout(() => triggerCpuTurn(), 1000);
             }
         }
 
-        // 端っこを避けて内側に壁を生成するロジック
+        // ゴール可能なCPU用のランダム壁生成
         function generateRandomSolveWalls() {
-            state.mySolveWalls = [];
-            while (state.mySolveWalls.length < state.wallCount) {
-                const type = Math.random() < 0.5 ? 'h' : 'v';
-                let r, c;
-                if (type === 'h') {
-                    r = Math.floor(Math.random() * 5) + 1;
-                    c = Math.floor(Math.random() * 6);
-                } else {
-                    r = Math.floor(Math.random() * 6);
-                    c = Math.floor(Math.random() * 5) + 1;
+            while (true) {
+                const walls = [];
+                while (walls.length < state.wallCount) {
+                    const type = Math.random() < 0.5 ? 'h' : 'v';
+                    let r, c;
+                    if (type === 'h') {
+                        r = Math.floor(Math.random() * 5) + 1;
+                        c = Math.floor(Math.random() * 6);
+                    } else {
+                        r = Math.floor(Math.random() * 6);
+                        c = Math.floor(Math.random() * 5) + 1;
+                    }
+                    if (!walls.some(w => w.type === type && w.r === r && w.c === c)) {
+                        walls.push({type, r, c});
+                    }
                 }
-
-                if (!state.mySolveWalls.some(w => w.type === type && w.r === r && w.c === c)) {
-                    state.mySolveWalls.push({type, r, c});
+                if (isMazeSolvable(state.mySolveStart, state.mySolveGoal, walls, state.gridSize)) {
+                    state.mySolveWalls = walls;
+                    break;
                 }
             }
         }
+
         function initGameScreen() {
             switchScreen('screen-game');
             document.getElementById('pane-title-solve').innerText = `${state.name} の解く盤面`;
@@ -670,14 +754,19 @@
 
         function updateGameUI() {
             const header = document.getElementById('game-turn-header');
+            const controls = document.getElementById('player-dir-controls');
+
             if (state.gameOver) {
-                header.innerText = 'ゲーム終了';
+                header.innerText = 'ゲーム終了 (感想戦中)';
+                controls.style.display = 'none';
             } else if (state.isMyTurn) {
                 header.innerText = state.suddenDeath ? 'サドンデス中 (あなたのターン)' : 'ゲーム進行中 (あなたのターン)';
                 header.style.color = '#27ae60';
+                controls.style.display = 'grid';
             } else {
                 header.innerText = state.suddenDeath ? 'サドンデス中 (相手のターン)' : 'ゲーム進行中 (相手のターン)';
                 header.style.color = '#e74c3c';
+                controls.style.display = 'none';
             }
             renderDualBoards();
             updateLogDisplay();
@@ -716,10 +805,6 @@
                     if (state.currentPos.r === r && state.currentPos.c === c) {
                         cell.innerHTML += svgPlayerIcon;
                     }
-
-                    cell.onclick = () => {
-                        if (state.isMyTurn && !state.gameOver) tryMoveToCell(r, c);
-                    };
                     board.appendChild(cell);
                 }
             }
@@ -748,7 +833,7 @@
             container.appendChild(board);
         }
 
-        // 2. 自分が作った盤面（相手の人型アイコンを配置して動きを可視化）
+        // 2. 自分が作った盤面（相手の位置を表示）
         function renderCreatorBoard() {
             const container = document.getElementById('creator-board-container');
             container.innerHTML = '';
@@ -772,7 +857,6 @@
                         cell.classList.add('goal');
                         cell.innerHTML = '<span class="cell-tag-large">G</span>';
                     }
-                    // 自分が作った盤面上の相手の位置に赤色の人型アイコンを表示
                     if (state.opponentPos.r === r && state.opponentPos.c === c) {
                         cell.innerHTML += svgOpponentIcon;
                     }
@@ -801,43 +885,73 @@
             container.appendChild(board);
         }
 
-        // 移動・壁衝突・サドンデス・勝敗判定
-        function tryMoveToCell(targetR, targetC) {
+        // 壁にぶつかるまで連続で一気に進むメインロジック
+        function slideMove(direction) {
             if (state.gameOver || !state.isMyTurn) return;
 
-            const curR = state.currentPos.r;
-            const curC = state.currentPos.c;
-            const dr = Math.abs(targetR - curR);
-            const dc = Math.abs(targetC - curC);
-            if ((dr + dc) !== 1) return;
-
-            let wallBlocked = false;
+            let r = state.currentPos.r;
+            let c = state.currentPos.c;
             let hitWallObj = null;
-
-            if (targetR < curR) {
-                wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR && w.c === curC);
-                hitWallObj = { type: 'h', r: curR, c: curC };
-            } else if (targetR > curR) {
-                wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR + 1 && w.c === curC);
-                hitWallObj = { type: 'h', r: curR + 1, c: curC };
-            } else if (targetC < curC) {
-                wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC);
-                hitWallObj = { type: 'v', r: curR, c: curC };
-            } else if (targetC > curC) {
-                wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC + 1);
-                hitWallObj = { type: 'v', r: curR, c: curC + 1 };
-            }
+            let lastValidCell = {r, c};
 
             const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
-            const targetCoord = `${cols[targetR]}${targetC + 1}`;
 
-            if (wallBlocked) {
-                showFullscreenSymbol('cross'); // 鮮やかな赤字の☓
-                if (!state.hitWalls.some(hw => hw.type === hitWallObj.type && hw.r === hw.r && hw.c === hitWallObj.c)) {
+            while (true) {
+                let nextR = r;
+                let nextC = c;
+                if (direction === 'up') nextR--;
+                else if (direction === 'down') nextR++;
+                else if (direction === 'left') nextC--;
+                else if (direction === 'right') nextC++;
+
+                // 盤面の外壁（外枠）に当たった場合
+                if (nextR < 0 || nextR >= state.gridSize || nextC < 0 || nextC >= state.gridSize) {
+                    break;
+                }
+
+                // 内部の壁に当たっているかチェック
+                let wallBlocked = false;
+                let candidateHit = null;
+
+                if (nextR < r) {
+                    wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === r && w.c === c);
+                    candidateHit = { type: 'h', r: r, c: c };
+                } else if (nextR > r) {
+                    wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === r + 1 && w.c === c);
+                    candidateHit = { type: 'h', r: r + 1, c: c };
+                } else if (nextC < c) {
+                    wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === r && w.c === c);
+                    candidateHit = { type: 'v', r: r, c: c };
+                } else if (nextC > c) {
+                    wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === r && w.c === c + 1);
+                    candidateHit = { type: 'v', r: r, c: c + 1 };
+                }
+
+                if (wallBlocked) {
+                    hitWallObj = candidateHit;
+                    break;
+                }
+
+                r = nextR;
+                c = nextC;
+                lastValidCell = {r, c};
+
+                // 途中でゴールに到達した場合
+                if (r === state.mySolveGoal.r && c === state.mySolveGoal.c) {
+                    break;
+                }
+            }
+
+            // 移動先の更新
+            state.currentPos = lastValidCell;
+            const targetCoord = `${cols[state.currentPos.r]}${state.currentPos.c + 1}`;
+
+            if (hitWallObj) {
+                showFullscreenSymbol('cross');
+                if (!state.hitWalls.some(hw => hw.type === hitWallObj.type && hw.r === hitWallObj.r && hw.c === hitWallObj.c)) {
                     state.hitWalls.push(hitWallObj);
                 }
-                
-                // サドンデス中に壁にぶつかった場合、先攻が先にゴールしていて後攻が失敗したので先攻の勝ち
+
                 if (state.suddenDeath && state.suddenDeathPlayer === 'opponent') {
                     state.gameOver = true;
                     state.logs.push(`[システム] ${state.name} がサドンデスで壁に衝突！ 相手の勝ち！`);
@@ -846,7 +960,7 @@
                     return;
                 }
 
-                state.logs.push(`[ログ] ${targetCoord} で壁に衝突！ターン交代`);
+                state.logs.push(`[ログ] 壁に衝突 (${targetCoord}付近)！ターン交代`);
                 state.isMyTurn = false;
                 updateGameUI();
 
@@ -855,26 +969,22 @@
                 }
             } else {
                 showFullscreenSymbol('circle');
-                state.currentPos = { r: targetR, c: targetC };
-                state.logs.push(`[ログ] ${targetCoord} へ移動成功！`);
+                state.logs.push(`[ログ] ${targetCoord} まで連続移動成功！`);
 
-                // ゴール判定
                 if (state.currentPos.r === state.mySolveGoal.r && state.currentPos.c === state.mySolveGoal.c) {
                     if (!state.suddenDeath) {
                         state.suddenDeath = true;
                         state.suddenDeathPlayer = 'my';
                         showSuddenDeathOverlay();
                         state.logs.push(`[システム] ${state.name} がゴール！後攻（相手）に最後の一手のチャンス（サドンデス）！`);
-                        
-                        if (state.isMyTurn && state.gameMode === 'cpu') {
-                            // 自分が先攻で先にゴールした場合、CPU（後攻）にラスト1ターンのチャンスを与える
+
+                        if (state.gameMode === 'cpu') {
                             state.isMyTurn = false;
                             updateGameUI();
-                            setTimeout(() => triggerCpuSuddenDeathTurn(), 1500);
+                            setTimeout(() => triggerCpuSuddenDeathTurn(), 1600);
                             return;
                         }
                     } else {
-                        // サドンデス中に後攻（自分）がゴールした場合 => 引き分け！
                         state.gameOver = true;
                         state.logs.push('[システム] サドンデス成功！引き分け！');
                         updateGameUI();
@@ -882,7 +992,7 @@
                         return;
                     }
                 }
-                
+
                 if (!state.gameOver) {
                     state.isMyTurn = false;
                     updateGameUI();
@@ -893,7 +1003,7 @@
             }
         }
 
-        // コンピューターのターン（通常＆サドンデス対応）
+        // コンピューター側の連続スライド移動処理
         function triggerCpuTurn() {
             if (state.gameOver) return;
             state.logs.push('[CPU] 迷路を探索中...');
@@ -902,24 +1012,54 @@
             setTimeout(() => {
                 if (state.gameOver) return;
 
-                // CPUの移動シミュレーション（自分の作った盤面上の opponentPos を動かす）
-                const possibleMoves = [
-                    {r: state.opponentPos.r - 1, c: state.opponentPos.c},
-                    {r: state.opponentPos.r + 1, c: state.opponentPos.c},
-                    {r: state.opponentPos.r, c: state.opponentPos.c - 1},
-                    {r: state.opponentPos.r, c: state.opponentPos.c + 1}
-                ].filter(p => p.r >= 0 && p.r < state.gridSize && p.c >= 0 && p.c < state.gridSize);
+                const dirs = ['up', 'down', 'left', 'right'];
+                const chosenDir = dirs[Math.floor(Math.random() * dirs.length)];
 
-                const nextP = possibleMoves[Math.floor(Math.random() * possibleMoves.length)] || state.opponentPos;
-                state.opponentPos = nextP;
+                let r = state.opponentPos.r;
+                let c = state.opponentPos.c;
+                let hitWall = false;
+                let lastValid = {r, c};
 
-                const hit = Math.random() < 0.4;
-                if (hit) {
+                while (true) {
+                    let nextR = r;
+                    let nextC = c;
+                    if (chosenDir === 'up') nextR--;
+                    else if (chosenDir === 'down') nextR++;
+                    else if (chosenDir === 'left') nextC--;
+                    else if (chosenDir === 'right') nextC++;
+
+                    if (nextR < 0 || nextR >= state.gridSize || nextC < 0 || nextC >= state.gridSize) {
+                        hitWall = true;
+                        break;
+                    }
+
+                    let wallBlocked = false;
+                    if (nextR < r) wallBlocked = state.myCreatorWalls.some(w => w.type === 'h' && w.r === r && w.c === c);
+                    else if (nextR > r) wallBlocked = state.myCreatorWalls.some(w => w.type === 'h' && w.r === r + 1 && w.c === c);
+                    else if (nextC < c) wallBlocked = state.myCreatorWalls.some(w => w.type === 'v' && w.r === r && w.c === c);
+                    else if (nextC > c) wallBlocked = state.myCreatorWalls.some(w => w.type === 'v' && w.r === r && w.c === c + 1);
+
+                    if (wallBlocked) {
+                        hitWall = true;
+                        break;
+                    }
+
+                    r = nextR;
+                    c = nextC;
+                    lastValid = {r, c};
+
+                    if (r === state.opponentGoal.r && c === state.opponentGoal.c) {
+                        break;
+                    }
+                }
+
+                state.opponentPos = lastValid;
+
+                if (hitWall) {
                     showFullscreenSymbol('cross');
                     state.logs.push('[CPU] 自分が作った盤面で壁に衝突しました！');
-                    
+
                     if (state.suddenDeath && state.suddenDeathPlayer === 'my') {
-                        // サドンデス中、先攻の自分が先にゴールしており、後攻のCPUが壁にぶつかった => 自分の勝ち！
                         state.gameOver = true;
                         state.logs.push(`[システム] CPUがサドンデスで壁に衝突！ **${state.name} の勝ち！**`);
                         updateGameUI();
@@ -931,9 +1071,8 @@
                     updateGameUI();
                 } else {
                     showFullscreenSymbol('circle');
-                    state.logs.push('[CPU] 1歩前進しました。');
+                    state.logs.push('[CPU] 連続移動成功！');
 
-                    // CPUがゴールに到達したか
                     if (state.opponentPos.r === state.opponentGoal.r && state.opponentPos.c === state.opponentGoal.c) {
                         if (!state.suddenDeath) {
                             state.suddenDeath = true;
@@ -944,7 +1083,6 @@
                             updateGameUI();
                             return;
                         } else {
-                            // サドンデス中にCPUがゴール => 引き分け
                             state.gameOver = true;
                             state.logs.push('[システム] サドンデス成立！引き分け！');
                             updateGameUI();
@@ -959,7 +1097,7 @@
             }, 1500);
         }
 
-        // サドンデス時のCPU最後の一手ターン処理
+        // サドンデス時のCPU最後の一手
         function triggerCpuSuddenDeathTurn() {
             if (state.gameOver) return;
             state.logs.push('[CPU] サドンデス：最後の一手を思考中...');
@@ -984,34 +1122,42 @@
             }, 1500);
         }
 
-        // 画面全体に「サドンデス！」を表示する演出
+        // サドンデス演出
         function showSuddenDeathOverlay() {
             const overlay = document.getElementById('fullscreen-overlay');
             const box = document.getElementById('feedback-symbol-box');
             overlay.style.display = 'flex';
             box.className = 'feedback-symbol fb-sudden';
             box.innerHTML = 'サドンデス！';
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 1600);
+            state.waitingForOverlayTap = true;
         }
 
-        // 画面全体に勝利・結末を表示する演出
+        // 勝利演出（タップ待ち）
         function showWinOverlay(winnerText) {
             const overlay = document.getElementById('fullscreen-overlay');
             const box = document.getElementById('feedback-symbol-box');
             overlay.style.display = 'flex';
             box.className = 'feedback-symbol fb-win';
             box.innerHTML = winnerText;
-            // 勝ち演出は残すため自動非表示にはしません
+            state.waitingForOverlayTap = true;
         }
 
-        // 画面いっぱいの巨大シンボル演出（〇 と 赤字の☓）
+        // オーバーレイがタップされたときの処理（演出を消して感想戦へ）
+        function handleOverlayClick() {
+            if (state.waitingForOverlayTap) {
+                document.getElementById('fullscreen-overlay').style.display = 'none';
+                state.waitingForOverlayTap = false;
+            }
+        }
+
+        // 巨大シンボル（〇 と 赤字の☓）
         function showFullscreenSymbol(type) {
             const overlay = document.getElementById('fullscreen-overlay');
             const box = document.getElementById('feedback-symbol-box');
             
             overlay.style.display = 'flex';
+            state.waitingForOverlayTap = false;
+
             if (type === 'circle') {
                 box.className = 'feedback-symbol fb-circle';
                 box.innerHTML = '〇';
@@ -1021,8 +1167,7 @@
             }
 
             setTimeout(() => {
-                // 勝利演出中（fb-win）でなければ非表示にする
-                if (!box.classList.contains('fb-win')) {
+                if (!state.waitingForOverlayTap && document.getElementById('fullscreen-overlay').style.display === 'flex') {
                     overlay.style.display = 'none';
                 }
             }, 550);
