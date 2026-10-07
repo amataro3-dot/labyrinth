@@ -5,141 +5,187 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Labyrinth</title>
     <style>
+        :root {
+            --cell-size: 55px;
+        }
         body {
-            font-family: sans-serif;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
             margin: 0;
-            padding: 10px;
-            background-color: #f7f7f7;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         h1 {
-            margin: 10px 0;
-            font-size: 1.5rem;
-        }
-        .container {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            max-width: 400px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .instructions {
-            color: #d32f2f;
-            font-size: 0.85rem;
-            text-align: center;
+            color: #2c3e50;
             margin-bottom: 10px;
-            font-weight: bold;
         }
-        .setting-group {
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
+        .screen {
+            display: none;
+            flex-direction: column;
             align-items: center;
-            font-size: 0.9rem;
-            background: #f1f8e9;
-            padding: 8px;
-            border-radius: 5px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
         }
-        .setting-group select {
-            padding: 4px;
-            font-size: 0.9rem;
+        .screen.active {
+            display: flex;
         }
-        .btn {
-            background-color: #388e3c;
+        .form-group {
+            margin: 12px 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input, select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            width: 80%;
+            max-width: 300px;
+        }
+        button {
+            background-color: #3498db;
             color: white;
             border: none;
-            padding: 10px;
-            width: 100%;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 12px 24px;
+            font-size: 16px;
             font-weight: bold;
+            border-radius: 6px;
             cursor: pointer;
-            margin-bottom: 15px;
+            margin-top: 15px;
+            transition: background 0.2s;
         }
-        .btn:active {
-            background-color: #2e7d32;
+        button:hover {
+            background-color: #2980b9;
         }
-        .section-title {
-            text-align: center;
-            color: #1976d2;
-            font-weight: bold;
-            margin: 15px 0 5px 0;
-            font-size: 0.95rem;
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
         }
+
+        /* 盤面スタイル (6x6) */
         .board-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 15px;
+            position: relative;
+            margin: 20px 0;
         }
-        .cols-label {
+        .board {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            width: 240px;
-            text-align: center;
-            font-size: 0.85rem;
-            color: #555;
-            margin-bottom: 2px;
-        }
-        .board-row-wrapper {
-            display: flex;
-            align-items: center;
-        }
-        .rows-label {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            height: 240px;
-            font-size: 0.85rem;
-            color: #555;
-            width: 20px;
-            text-align: center;
-        }
-        .grid-wrapper {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            grid-template-rows: repeat(6, 1fr);
-            width: 240px;
-            height: 240px;
-            border: 2px solid #333;
+            grid-template-columns: 30px repeat(6, var(--cell-size));
+            grid-template-rows: 30px repeat(6, var(--cell-size));
+            gap: 0;
             background-color: #fff;
+            border: 2px solid #333;
         }
-        .cell {
-            border: 1px solid #ccc;
+        .axis-label {
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 14px;
+            color: #555;
+            background-color: #ecf0f1;
+        }
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border: 1px solid #dcdde1;
             box-sizing: border-box;
-            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            position: relative;
+            background-color: #fff;
             cursor: pointer;
         }
-        .cell.goal {
-            background-color: #ffe082;
-            color: #f57f17;
-        }
         .cell.start {
-            background-color: #c8e6c9;
-            color: #2e7d32;
+            background-color: #d4efdf;
+            color: #27ae60;
         }
-        .cell.wall {
-            background-color: #555;
-            color: white;
+        .cell.goal {
+            background-color: #fdebd0;
+            color: #e67e22;
         }
-        .log-box {
+        .cell.player {
+            background-color: #ebf5fb;
+            color: #2980b9;
+        }
+
+        /* 辺（壁）配置エリア */
+        .wall-h, .wall-v {
+            position: absolute;
+            background-color: transparent;
+            z-index: 10;
+            cursor: pointer;
+        }
+        .wall-h {
+            height: 8px;
+            transform: translateY(-4px);
+        }
+        .wall-v {
+            width: 8px;
+            transform: translateX(-4px);
+        }
+        .wall-h:hover, .wall-v:hover {
+            background-color: rgba(52, 152, 219, 0.4);
+        }
+        .wall-active {
+            background-color: #e74c3c !important; /* 赤 */
+        }
+        .wall-revealed-green {
+            background-color: #2ecc71 !important; /* 緑 */
+        }
+
+        /* フィードバック表示 */
+        #feedback-msg {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            min-height: 30px;
+            text-align: center;
+        }
+        .msg-blue { color: #2980b9; }
+        .msg-red { color: #e74c3c; }
+
+        /* チャット・リスト */
+        .room-info {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .chat-box {
+            width: 100%;
+            height: 120px;
             border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            height: 60px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-            color: #333;
+            border-radius: 6px;
+            overflow-y: scroll;
+            padding: 8px;
+            margin-bottom: 10px;
             background: #fafafa;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .chat-input-area {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            max-width: none;
         }
     </style>
 </head>
@@ -147,186 +193,470 @@
 
     <h1>Labyrinth</h1>
 
-    <div class="container">
-        <div class="setting-group">
-            <label for="wall-count-select">🧱 配置する壁の数:</label>
-            <select id="wall-count-select">
-                <option value="1">1個</option>
-                <option value="2">2個</option>
-                <option value="3" selected>3個</option>
-                <option value="4">4個</option>
-                <option value="5">5個</option>
+    <!-- 1. ロール・ルーム選択画面 -->
+    <div id="screen-lobby" class="screen active">
+        <h2>ルーム参加</h2>
+        <div class="form-group">
+            <label>プレイヤー名:</label>
+            <input type="text" id="input-name" placeholder="名前を入力">
+        </div>
+        <div class="form-group">
+            <label>ルームID:</label>
+            <input type="text" id="input-room" value="room123">
+        </div>
+        <div class="form-group">
+            <label>役割:</label>
+            <select id="select-role">
+                <option value="player">対戦 (Player)</option>
+                <option value="spectator">観戦 (Spectator)</option>
             </select>
         </div>
+        <button onclick="joinRoom()">ルームに入室する</button>
+    </div>
 
-        <div class="instructions" id="instructions-text">
-            【初期設定】スタート(S)とゴール(G)をタップ指定してください
+    <!-- 2. 管理者設定画面 -->
+    <div id="screen-setup" class="screen">
+        <h2>ゲーム設定 (管理者)</h2>
+        <div class="room-info" id="setup-room-info"></div>
+        <div class="form-group">
+            <label>壁の数 (5〜15個):</label>
+            <input type="number" id="input-wall-count" min="5" max="15" value="5">
         </div>
-
-        <button class="btn" id="action-btn">配置完了 (0/3)</button>
-
-        <div class="section-title">【上】 相手の盤面（あなたが解く）</div>
-        <div class="board-container">
-            <div class="cols-label">
-                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div>
-            </div>
-            <div class="board-row-wrapper">
-                <div class="rows-label">
-                    <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div>
-                </div>
-                <div class="grid-wrapper" id="board-top"></div>
-            </div>
+        <div class="form-group">
+            <label>観戦者からお互いの壁の位置を見えるようにする:</label>
+            <select id="select-spectator-wall">
+                <option value="yes">見える</option>
+                <option value="no" selected>見えない</option>
+            </select>
         </div>
+        <button onclick="startSetupPhase()">セットアップ画面へ進む</button>
+    </div>
 
-        <div class="section-title">【下】 自分の盤面（相手が解く）</div>
-        <div class="board-container">
-            <div class="cols-label">
-                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div>
-            </div>
-            <div class="board-row-wrapper">
-                <div class="rows-label">
-                    <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div>
-                </div>
-                <div class="grid-wrapper" id="board-bottom"></div>
-            </div>
-        </div>
+    <!-- 3. 壁・S・G 配置画面 -->
+    <div id="screen-board-setup" class="screen">
+        <h2 id="setup-title">スタート・ゴール・壁の配置</h2>
+        <p style="font-size: 13px; color: #555; text-align: center;">
+            最初にS(スタート)、次にG(ゴール)を選び、マスの「辺」をクリックして壁（<span id="max-wall-label">5</span>個）を配置してください。
+        </p>
+        <div class="board-container" id="setup-board-container"></div>
+        <button id="btn-complete-setup" onclick="completeSetup()" disabled>配置完了・ゲーム待機</button>
+    </div>
 
-        <div class="log-box" id="log">
-            ゲームを開始しました。壁の数を選んでスタート・ゴールを配置してください。
+    <!-- 4. ゲームプレイ画面 -->
+    <div id="screen-game" class="screen">
+        <h2 id="game-turn-header">ゲーム画面</h2>
+        <div id="feedback-msg"></div>
+        <div class="board-container" id="game-board-container"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button onclick="movePlayer('up')">↑ 上</button>
+            <button onclick="movePlayer('down')">↓ 下</button>
+            <button onclick="movePlayer('left')">← 左</button>
+            <button onclick="movePlayer('right')">→ 右</button>
         </div>
     </div>
 
-    <script>
-        const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
-        const cols = [1, 2, 3, 4, 5, 6];
-        
-        let maxWalls = 3;
-        let gameState = 'SETUP_SG'; // SETUP_SG -> SETUP_WALLS -> PLAYING
-        let startPos = null;
-        let goalPos = null;
-        let walls = [];
+    <!-- 5. 観戦・チャット画面 (観戦者用) -->
+    <div id="screen-spectator" class="screen">
+        <h2>観戦ルーム</h2>
+        <div id="spec-status" style="font-weight: bold; margin-bottom: 10px;"></div>
+        <div class="board-container" id="spec-board-container"></div>
+        <div class="chat-box" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="チャットを入力...">
+            <button onclick="sendChat()" style="margin-top:0;">送信</button>
+        </div>
+    </div>
+<script>
+        let state = {
+            name: '',
+            roomId: '',
+            role: '',
+            isHost: true,
+            wallCount: 5,
+            spectatorCanSeeWalls: false,
+            gridSize: 6,
+            startPos: null,
+            goalPos: null,
+            walls: [],
+            currentPos: null,
+            suddenDeath: false,
+            gameOver: false,
+            hitWalls: [],
+            chats: []
+        };
 
-        const wallSelect = document.getElementById('wall-count-select');
-        const actionBtn = document.getElementById('action-btn');
-        const instructionsText = document.getElementById('instructions-text');
-        const logBox = document.getElementById('log');
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
 
-        wallSelect.addEventListener('change', (e) => {
-            if (gameState === 'SETUP_SG' || gameState === 'SETUP_WALLS') {
-                maxWalls = parseInt(e.target.value);
-                updateUI();
+        function joinRoom() {
+            const name = document.getElementById('input-name').value.trim();
+            const roomId = document.getElementById('input-room').value.trim();
+            const role = document.getElementById('select-role').value;
+
+            if (!name) {
+                alert('プレイヤー名を入力してください。');
+                return;
             }
-        });
 
-        function log(message) {
-            logBox.innerHTML += `<br>${message}`;
-            logBox.scrollTop = logBox.scrollHeight;
+            state.name = name;
+            state.roomId = roomId;
+            state.role = role;
+
+            if (state.isHost && role === 'player') {
+                document.getElementById('setup-room-info').innerText = `ルームID: ${roomId} (管理者: ${name})`;
+                switchScreen('screen-setup');
+            } else {
+                alert('ルームに入室しました！配置フェーズへ進みます。');
+                initBoardSetup();
+            }
         }
 
-        function createBoards() {
-            ['board-top', 'board-bottom'].forEach(id => {
-                const board = document.getElementById(id);
-                board.innerHTML = '';
-                for (let r = 0; r < 6; r++) {
-                    for (let c = 0; c < 6; c++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell';
-                        cell.dataset.r = r;
-                        cell.dataset.c = c;
-                        cell.addEventListener('click', () => handleCellClick(r, c));
-                        board.appendChild(cell);
+        function startSetupPhase() {
+            const wc = parseInt(document.getElementById('input-wall-count').value);
+            if (isNaN(wc) || wc < 5 || wc > 15) {
+                alert('壁の数は5〜15個の間で指定してください。');
+                return;
+            }
+            state.wallCount = wc;
+            state.spectatorCanSeeWalls = document.getElementById('select-spectator-wall').value === 'yes';
+            initBoardSetup();
+        }
+
+        let setupStep = 'start';
+        let tempStart = null;
+        let tempGoal = null;
+        let tempWalls = [];
+
+        function initBoardSetup() {
+            switchScreen('screen-board-setup');
+            document.getElementById('max-wall-label').innerText = state.wallCount;
+            setupStep = 'start';
+            tempStart = null;
+            tempGoal = null;
+            tempWalls = [];
+            document.getElementById('setup-title').innerText = 'スタート(S)の位置を選択してください';
+            document.getElementById('btn-complete-setup').disabled = true;
+            renderSetupBoard();
+        }
+
+        function renderSetupBoard() {
+            const container = document.getElementById('setup-board-container');
+            container.innerHTML = '';
+            const board = document.createElement('div');
+            board.className = 'board';
+
+            board.appendChild(createLabel(''));
+            for (let c = 0; c < state.gridSize; c++) {
+                board.appendChild(createLabel(c + 1));
+            }
+
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+            for (let r = 0; r < state.gridSize; r++) {
+                board.appendChild(createLabel(cols[r]));
+                for (let c = 0; c < state.gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (tempStart && tempStart.r === r && tempStart.c === c) {
+                        cell.classList.add('start');
+                        cell.innerText = 'S';
+                    } else if (tempGoal && tempGoal.r === r && tempGoal.c === c) {
+                        cell.classList.add('goal');
+                        cell.innerText = 'G';
                     }
+                    cell.onclick = () => handleCellClick(r, c);
+                    board.appendChild(cell);
                 }
-            });
-            renderBoards();
+            }
+
+            for (let r = 0; r <= state.gridSize; r++) {
+                for (let c = 0; c < state.gridSize; c++) {
+                    const wallH = document.createElement('div');
+                    wallH.className = 'wall-h';
+                    if (tempWalls.some(w => w.type === 'h' && w.r === r && w.c === c)) {
+                        wallH.classList.add('wall-active');
+                    }
+                    wallH.style.top = `${r * 55}px`;
+                    wallH.style.left = `${30 + c * 55}px`;
+                    wallH.style.width = '55px';
+                    wallH.onclick = (e) => { e.stopPropagation(); handleWallClick('h', r, c); };
+                    board.appendChild(wallH);
+                }
+            }
+
+            for (let r = 0; r < state.gridSize; r++) {
+                for (let c = 0; c <= state.gridSize; c++) {
+                    const wallV = document.createElement('div');
+                    wallV.className = 'wall-v';
+                    if (tempWalls.some(w => w.type === 'v' && w.r === r && w.c === c)) {
+                        wallV.classList.add('wall-active');
+                    }
+                    wallV.style.top = `${30 + r * 55}px`;
+                    wallV.style.left = `${c * 55}px`;
+                    wallV.style.height = '55px';
+                    wallV.onclick = (e) => { e.stopPropagation(); handleWallClick('v', r, c); };
+                    board.appendChild(wallV);
+                }
+            }
+            container.appendChild(board);
         }
 
-        function renderBoards() {
-            // ここでは簡易的に下ボードを操作対象として描画
-            const bottomBoard = document.getElementById('board-bottom');
-            Array.from(bottomBoard.children).forEach(cell => {
-                const r = parseInt(cell.dataset.r);
-                const c = parseInt(cell.dataset.c);
-                
-                cell.className = 'cell';
-                cell.textContent = '';
-
-                if (startPos && startPos.r === r && startPos.c === c) {
-                    cell.classList.add('start');
-                    cell.textContent = 'S';
-                } else if (goalPos && goalPos.r === r && goalPos.c === c) {
-                    cell.classList.add('goal');
-                    cell.textContent = 'G';
-                } else if (walls.some(w => w.r === r && w.c === c)) {
-                    cell.classList.add('wall');
-                    cell.textContent = '■';
-                }
-            });
+        function createLabel(text) {
+            const div = document.createElement('div');
+            div.className = 'axis-label';
+            div.innerText = text;
+            return div;
         }
 
         function handleCellClick(r, c) {
-            if (gameState === 'SETUP_SG') {
-                if (!startPos) {
-                    startPos = {r, c};
-                    log(`スタート(S)を (${rows[r]}, ${cols[c]}) に設定しました。`);
-                } else if (!goalPos) {
-                    if (startPos.r === r && startPos.c === c) return;
-                    goalPos = {r, c};
-                    log(`ゴール(G)を (${rows[r]}, ${cols[c]}) に設定しました。`);
-                    gameState = 'SETUP_WALLS';
-                    instructionsText.innerHTML = `【壁配置】配置する壁を選んでください（最大${maxWalls}個）`;
-                }
-                renderBoards();
-                updateUI();
-            } else if (gameState === 'SETUP_WALLS') {
-                if ((startPos && startPos.r === r && startPos.c === c) ||
-                    (goalPos && goalPos.r === r && goalPos.c === c)) return;
-
-                const existingIndex = walls.findIndex(w => w.r === r && w.c === c);
-                if (existingIndex >= 0) {
-                    walls.splice(existingIndex, 1);
-                } else {
-                    if (walls.length < maxWalls) {
-                        walls.push({r, c});
-                    } else {
-                        log(`壁は最大${maxWalls}個までです。`);
-                    }
-                }
-                renderBoards();
-                updateUI();
-            }
-        }
-
-        actionBtn.addEventListener('click', () => {
-            if (gameState === 'SETUP_SG') {
-                log('先にスタートとゴールをタップしてください。');
-            } else if (gameState === 'SETUP_WALLS') {
-                if (walls.length === 0) {
-                    log('壁を1つ以上配置してください。');
+            if (setupStep === 'start') {
+                tempStart = {r, c};
+                setupStep = 'goal';
+                document.getElementById('setup-title').innerText = 'ゴール(G)の位置を選択してください';
+                renderSetupBoard();
+            } else if (setupStep === 'goal') {
+                if (tempStart.r === r && tempStart.c === c) {
+                    alert('スタートと同じ位置には置けません。');
                     return;
                 }
-                gameState = 'PLAYING';
-                wallSelect.disabled = true;
-                actionBtn.textContent = 'ゲーム進行中';
-                actionBtn.style.backgroundColor = '#1976d2';
-                instructionsText.innerHTML = '【対戦中】相手の迷路を解き進めてください！';
-                log('初期配置が完了しました。ゲーム開始！');
-            }
-        });
-
-        function updateUI() {
-            if (gameState === 'SETUP_SG') {
-                if (!startPos) {
-                    actionBtn.textContent = 'スタートを配置してください';
-                } else if (!goalPos) {
-                    actionBtn.textContent = 'ゴールを配置してください';
-                }
-            } else if (gameState === 'SETUP_WALLS') {
-                actionBtn.textContent = `配置完了 (${walls.length}/${maxWalls})`;
+                tempGoal = {r, c};
+                setupStep = 'walls';
+                document.getElementById('setup-title').innerText = `壁を配置してください (0 / ${state.wallCount}個)`;
+                renderSetupBoard();
             }
         }
 
-        createBoards();
+        function handleWallClick(type, r, c) {
+            if (setupStep !== 'walls') return;
+            const index = tempWalls.findIndex(w => w.type === type && w.r === r && w.c === c);
+            if (index > -1) {
+                tempWalls.splice(index, 1);
+            } else {
+                if (tempWalls.length >= state.wallCount) {
+                    alert(`壁の数は最大 ${state.wallCount} 個までです。`);
+                    return;
+                }
+                tempWalls.push({type, r, c});
+            }
+            document.getElementById('setup-title').innerText = `壁を配置してください (${tempWalls.length} / ${state.wallCount}個)`;
+            renderSetupBoard();
+            document.getElementById('btn-complete-setup').disabled = (tempWalls.length !== state.wallCount);
+        }
+
+        function completeSetup() {
+            state.startPos = tempStart;
+            state.goalPos = tempGoal;
+            state.walls = tempWalls;
+            state.currentPos = { ...tempStart };
+            state.hitWalls = [];
+            state.suddenDeath = false;
+            state.gameOver = false;
+
+            if (state.role === 'spectator') {
+                initSpectatorScreen();
+            } else {
+                initGameScreen();
+            }
+        }
+        function initGameScreen() {
+            switchScreen('screen-game');
+            document.getElementById('game-turn-header').innerText = `ターン: ${state.name} の番`;
+            document.getElementById('feedback-msg').innerText = '';
+            renderGameBoard();
+        }
+
+        function renderGameBoard() {
+            const container = document.getElementById('game-board-container');
+            container.innerHTML = '';
+            const board = document.createElement('div');
+            board.className = 'board';
+
+            board.appendChild(createLabel(''));
+            for (let c = 0; c < state.gridSize; c++) {
+                board.appendChild(createLabel(c + 1));
+            }
+
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+            for (let r = 0; r < state.gridSize; r++) {
+                board.appendChild(createLabel(cols[r]));
+                for (let c = 0; c < state.gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (state.startPos.r === r && state.startPos.c === c && !state.gameOver) {
+                        cell.classList.add('start');
+                        cell.innerText = 'S';
+                    }
+                    if (state.goalPos.r === r && state.goalPos.c === c) {
+                        cell.classList.add('goal');
+                        cell.innerText = 'G';
+                    }
+                    if (state.currentPos.r === r && state.currentPos.c === c) {
+                        cell.classList.add('player');
+                        cell.innerText = 'P';
+                    }
+                    board.appendChild(cell);
+                }
+            }
+
+            state.walls.forEach(w => {
+                const wallDiv = document.createElement('div');
+                if (w.type === 'h') {
+                    wallDiv.className = 'wall-h';
+                    wallDiv.style.top = `${w.r * 55}px`;
+                    wallDiv.style.left = `${30 + w.c * 55}px`;
+                    wallDiv.style.width = '55px';
+                } else {
+                    wallDiv.className = 'wall-v';
+                    wallDiv.style.top = `${30 + w.r * 55}px`;
+                    wallDiv.style.left = `${w.c * 55}px`;
+                    wallDiv.style.height = '55px';
+                }
+
+                if (state.gameOver) {
+                    const isHit = state.hitWalls.some(hw => hw.type === w.type && hw.r === w.r && hw.c === w.c);
+                    if (isHit) {
+                        wallDiv.classList.add('wall-active');
+                    } else {
+                        wallDiv.classList.add('wall-revealed-green');
+                    }
+                }
+                board.appendChild(wallDiv);
+            });
+            container.appendChild(board);
+        }
+
+        function movePlayer(direction) {
+            if (state.gameOver) return;
+
+            let newR = state.currentPos.r;
+            let newC = state.currentPos.c;
+            let wallCheck = false;
+
+            if (direction === 'up') {
+                if (newR > 0) {
+                    if (state.walls.some(w => w.type === 'h' && w.r === newR && w.c === newC)) wallCheck = true;
+                    else newR--;
+                } else { wallCheck = true; }
+            } else if (direction === 'down') {
+                if (newR < state.gridSize - 1) {
+                    if (state.walls.some(w => w.type === 'h' && w.r === newR + 1 && w.c === newC)) wallCheck = true;
+                    else newR++;
+                } else { wallCheck = true; }
+            } else if (direction === 'left') {
+                if (newC > 0) {
+                    if (state.walls.some(w => w.type === 'v' && w.r === newR && w.c === newC)) wallCheck = true;
+                    else newC--;
+                } else { wallCheck = true; }
+            } else if (direction === 'right') {
+                if (newC < state.gridSize - 1) {
+                    if (state.walls.some(w => w.type === 'v' && w.r === newR && w.c === newC + 1)) wallCheck = true;
+                    else newC++;
+                } else { wallCheck = true; }
+            }
+
+            const msgElem = document.getElementById('feedback-msg');
+
+            if (wallCheck) {
+                msgElem.className = 'msg-red';
+                msgElem.innerText = '☓(だめっ！)';
+                recordHitWall(direction, state.currentPos.r, state.currentPos.c);
+            } else {
+                msgElem.className = 'msg-blue';
+                msgElem.innerText = '〇(いけるっ！)';
+                state.currentPos = { r: newR, c: newC };
+
+                if (state.currentPos.r === state.goalPos.r && state.currentPos.c === state.goalPos.c) {
+                    if (!state.suddenDeath) {
+                        state.suddenDeath = true;
+                        msgElem.className = 'msg-red';
+                        msgElem.innerText = 'サドンデス！クリア出来たら引き分け！！';
+                        setTimeout(() => { alert('ゴール到達！サドンデス発生：後攻プレイヤーのターンです！'); }, 100);
+                    } else {
+                        state.gameOver = true;
+                        msgElem.className = 'msg-red';
+                        msgElem.innerText = '引き分け！！';
+                        alert('後攻もクリアしました！引き分けです！');
+                        renderGameBoard();
+                        return;
+                    }
+                }
+            }
+            renderGameBoard();
+        }
+
+        function recordHitWall(dir, r, c) {
+            let targetWall = null;
+            if (dir === 'up') targetWall = { type: 'h', r: r, c: c };
+            if (dir === 'down') targetWall = { type: 'h', r: r + 1, c: c };
+            if (dir === 'left') targetWall = { type: 'v', r: r, c: c };
+            if (dir === 'right') targetWall = { type: 'v', r: r, c: c + 1 };
+
+            if (targetWall && state.walls.some(w => w.type === targetWall.type && w.r === targetWall.r && w.c === targetWall.c)) {
+                if (!state.hitWalls.some(hw => hw.type === targetWall.type && hw.r === targetWall.r && hw.c === targetWall.c)) {
+                    state.hitWalls.push(targetWall);
+                }
+            }
+        }
+
+        function initSpectatorScreen() {
+            switchScreen('screen-spectator');
+            document.getElementById('spec-status').innerText = `観戦中 (${state.roomId})`;
+            renderSpectatorBoard();
+        }
+
+        function renderSpectatorBoard() {
+            const container = document.getElementById('spec-board-container');
+            container.innerHTML = '';
+            const board = document.createElement('div');
+            board.className = 'board';
+            board.appendChild(createLabel(''));
+            for (let c = 0; c < state.gridSize; c++) board.appendChild(createLabel(c + 1));
+            
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+            for (let r = 0; r < state.gridSize; r++) {
+                board.appendChild(createLabel(cols[r]));
+                for (let c = 0; c < state.gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    board.appendChild(cell);
+                }
+            }
+
+            if (state.spectatorCanSeeWalls) {
+                state.walls.forEach(w => {
+                    const wallDiv = document.createElement('div');
+                    if (w.type === 'h') {
+                        wallDiv.className = 'wall-h wall-active';
+                        wallDiv.style.top = `${w.r * 55}px`;
+                        wallDiv.style.left = `${30 + w.c * 55}px`;
+                        wallDiv.style.width = '55px';
+                    } else {
+                        wallDiv.className = 'wall-v wall-active';
+                        wallDiv.style.top = `${30 + w.r * 55}px`;
+                        wallDiv.style.left = `${w.c * 55}px`;
+                        wallDiv.style.height = '55px';
+                    }
+                    board.appendChild(wallDiv);
+                });
+            }
+            container.appendChild(board);
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            state.chats.push({ name: state.name, text: text });
+            input.value = '';
+            updateChatBox();
+        }
+
+        function updateChatBox() {
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML = state.chats.map(c => `<div><strong>${c.name}:</strong> ${c.text}</div>`).join('');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
     </script>
 </body>
 </html>
