@@ -75,7 +75,6 @@
         button.secondary { background-color: #7f8c8d; }
         button.secondary:hover { background-color: #636e72; }
 
-        /* デュアル盤面をスマホでも縦に美しく、あるいは横に並べるラッパー */
         .game-layout {
             display: flex;
             flex-direction: column;
@@ -142,7 +141,6 @@
         .cell.start { background-color: #e8f8f5; }
         .cell.goal { background-color: #fef5e7; }
         
-        /* マス目の中に大きくドーンと表示するSとG */
         .cell-tag-large {
             font-size: 16px;
             font-weight: 900;
@@ -151,7 +149,6 @@
         .cell.start .cell-tag-large { color: #27ae60; }
         .cell.goal .cell-tag-large { color: #e67e22; }
 
-        /* 人型アイコン */
         .player-icon {
             width: 18px;
             height: 18px;
@@ -159,7 +156,6 @@
             z-index: 5;
         }
 
-        /* 辺（壁）スタイル：基本は緑。解く盤面では非表示（見えない） */
         .wall-h, .wall-v {
             position: absolute;
             background-color: #2ecc71;
@@ -174,7 +170,6 @@
             width: 4px;
             transform: translateX(-2px);
         }
-        /* 当たった壁・またはクリエイター側・ゲームオーバー時の赤表示 */
         .wall-hit {
             background-color: #e74c3c !important;
         }
@@ -205,10 +200,17 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* 4〜5行表示のコンパクトなログ画面 */
-        .log-box {
+        /* ログとチャット統合エリア ＋ 横の全履歴ボタン */
+        .log-chat-wrapper {
+            display: flex;
             width: 100%;
             max-width: 450px;
+            gap: 6px;
+            align-items: stretch;
+            margin-top: 6px;
+        }
+        .log-box {
+            flex: 1;
             height: 75px; /* 約4〜5行分 */
             background: #222;
             color: #00ff66;
@@ -218,32 +220,74 @@
             border-radius: 6px;
             overflow-y: auto;
             box-sizing: border-box;
-            margin-top: 6px;
+            white-space: pre-wrap;
         }
+        .history-btn-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .history-btn-container button {
+            height: 100%;
+            margin-top: 0;
+            padding: 0 10px;
+            font-size: 12px;
+            background-color: #6c5ce7;
+        }
+        .history-btn-container button:hover { background-color: #5b4bc4; }
 
-        /* チャットエリア（対戦者は閲覧のみ、観戦者は送信可能） */
-        .chat-container {
-            width: 100%;
-            max-width: 450px;
-            margin-top: 6px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 6px;
-            background: #fafafa;
+        /* 全履歴表示モーダル */
+        #history-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: #fff;
+            width: 90%;
+            max-width: 400px;
+            height: 70vh;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
             box-sizing: border-box;
         }
-        .chat-box {
-            height: 60px;
-            overflow-y: scroll;
-            font-size: 12px;
-            background: #fff;
-            border: 1px solid #eee;
-            padding: 4px;
-            margin-bottom: 4px;
+        .modal-header {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .chat-input-area { display: flex; gap: 6px; }
-        .chat-input-area input { flex: 1; max-width: none; padding: 5px; font-size: 12px; }
-        .chat-input-area button { padding: 5px 10px; margin-top: 0; font-size: 12px; }
+        .modal-body {
+            flex: 1;
+            background: #111;
+            color: #00ff66;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 8px;
+            overflow-y: auto;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-bottom: 8px;
+        }
+
+        /* チャット入力エリア（観戦者用） */
+        .chat-input-row {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            max-width: 450px;
+            margin-top: 4px;
+        }
+        .chat-input-row input { flex: 1; max-width: none; padding: 6px; font-size: 12px; }
+        .chat-input-row button { padding: 6px 12px; margin-top: 0; font-size: 12px; }
 
         .room-info { font-size: 12px; color: #666; margin-bottom: 6px; }
     </style>
@@ -254,6 +298,17 @@
 
     <div id="fullscreen-overlay">
         <div id="feedback-symbol-box" class="feedback-symbol"></div>
+    </div>
+
+    <!-- 全履歴モーダル -->
+    <div id="history-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>📜 全行動・チャット履歴</span>
+                <button class="secondary" style="margin-top:0; padding:2px 8px; font-size:11px;" onclick="closeHistoryModal()">閉じる</button>
+            </div>
+            <div class="modal-body" id="modal-history-box"></div>
+        </div>
     </div>
     <!-- 1. ルーム入室画面 -->
     <div id="screen-lobby" class="screen active">
@@ -318,7 +373,7 @@
         <button id="btn-complete-setup" class="secondary" onclick="completeSetup()" disabled>配置完了・ゲーム開始</button>
     </div>
 
-    <!-- 4. ゲームプレイ画面（デュアル盤面 ＋ ログ ＋ チャット閲覧） -->
+    <!-- 4. ゲームプレイ画面（デュアル盤面 ＋ ログ/チャット統合 ＋ 全履歴ボタン） -->
     <div id="screen-game" class="screen" style="max-width: 900px;">
         <h2 id="game-turn-header" style="margin: 0 0 4px 0; font-size: 16px;">ゲーム進行中 (あなたのターン)</h2>
         
@@ -336,33 +391,21 @@
                 </div>
             </div>
 
-            <!-- 4〜5行のコンパクトなログ画面 -->
-            <div class="log-box" id="game-log-box"></div>
+            <!-- ログとチャット統合エリア ＋ 横の全履歴ボタン -->
+            <div class="log-chat-wrapper">
+                <div class="log-box" id="game-log-box"></div>
+                <div class="history-btn-container">
+                    <button onclick="openHistoryModal()">全履歴</button>
+                </div>
+            </div>
 
-            <!-- チャット閲覧エリア（対戦者は入力不可・閲覧のみ） -->
-            <div class="chat-container">
-                <div style="font-size: 11px; font-weight: bold; margin-bottom: 2px; color: #555;">💬 観戦チャット (閲覧のみ)</div>
-                <div class="chat-box" id="game-chat-messages"></div>
+            <!-- チャット入力（観戦者のみ使用可能・対戦者は非表示または操作不可） -->
+            <div class="chat-input-row" id="game-chat-input-area" style="display: none;">
+                <input type="text" id="game-chat-input" placeholder="観戦チャットを入力...">
+                <button onclick="sendChat()" style="margin-top:0;">送信</button>
             </div>
         </div>
 
-        <button class="secondary" style="margin-top: 8px;" onclick="returnToLobby()">ロビーに戻る</button>
-    </div>
-
-    <!-- 5. 観戦ルーム画面（観戦者はチャット送信可能） -->
-    <div id="screen-spectator" class="screen">
-        <h2>観戦ルーム</h2>
-        <div id="spec-status" style="font-weight: bold; margin-bottom: 6px; font-size: 12px;"></div>
-        <div class="board-container" id="spec-board-container" style="margin: 6px 0;"></div>
-        <div class="log-box" id="spec-log-box"></div>
-        <div class="chat-container">
-            <div style="font-size: 11px; font-weight: bold; margin-bottom: 2px; color: #27ae60;">💬 チャット送信 (観戦者専用)</div>
-            <div class="chat-box" id="spec-chat-messages"></div>
-            <div class="chat-input-area">
-                <input type="text" id="spec-chat-input" placeholder="チャットを入力...">
-                <button onclick="sendSpecChat()" style="margin-top:0;">送信</button>
-            </div>
-        </div>
         <button class="secondary" style="margin-top: 8px;" onclick="returnToLobby()">ロビーに戻る</button>
     </div>
 
@@ -389,8 +432,7 @@
             suddenDeath: false,
             gameOver: false,
             hitWalls: [],
-            logs: [],
-            chats: []
+            logs: [] // ログとチャットを統合した全履歴配列
         };
 
         const svgPlayerIcon = `<svg class="player-icon" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>`;
@@ -555,21 +597,34 @@
             state.suddenDeath = false;
             state.gameOver = false;
             state.isMyTurn = true;
-            state.logs = [`ゲーム開始！壁の数は ${state.wallCount} 個です。`];
+            state.logs = [`[システム] ゲーム開始！壁の数は ${state.wallCount} 個です。`];
 
+            // 観戦者の場合のみチャット入力欄を表示
             if (state.role === 'spectator') {
-                initSpectatorScreen();
+                document.getElementById('game-chat-input-area').style.display = 'flex';
+                state.logs.push(`[システム] ${state.name} が観戦者として参加しました。`);
             } else {
-                initGameScreen();
+                document.getElementById('game-chat-input-area').style.display = 'none';
             }
+
+            initGameScreen();
         }
 
+        // 端っこを避けて内側に壁を生成するロジック
         function generateRandomSolveWalls() {
             state.mySolveWalls = [];
             while (state.mySolveWalls.length < state.wallCount) {
                 const type = Math.random() < 0.5 ? 'h' : 'v';
-                const r = Math.floor(Math.random() * (type === 'h' ? 7 : 6));
-                const c = Math.floor(Math.random() * (type === 'h' ? 6 : 7));
+                // 外周の端（hならr=0や6、vならc=0や6）を完全に除外し、内側（h: r=1〜5, c=0〜5 / v: r=0〜5, c=1〜5）に限定する
+                let r, c;
+                if (type === 'h') {
+                    r = Math.floor(Math.random() * 5) + 1; // 1〜5行目のみ
+                    c = Math.floor(Math.random() * 6);     // 0〜5列目
+                } else {
+                    r = Math.floor(Math.random() * 6);     // 0〜5行目
+                    c = Math.floor(Math.random() * 5) + 1; // 1〜5列目のみ
+                }
+
                 if (!state.mySolveWalls.some(w => w.type === type && w.r === r && w.c === c)) {
                     state.mySolveWalls.push({type, r, c});
                 }
@@ -586,15 +641,14 @@
             if (state.gameOver) {
                 header.innerText = 'ゲーム終了';
             } else if (state.isMyTurn) {
-                header.innerText = 'あなたのターン (移動先をタップ)';
+                header.innerText = 'ゲーム進行中 (あなたのターン)';
                 header.style.color = '#27ae60';
             } else {
-                header.innerText = '相手(CPU)のターン...';
+                header.innerText = 'ゲーム進行中 (相手CPUのターン...)';
                 header.style.color = '#e74c3c';
             }
             renderDualBoards();
-            updateLogBoxes();
-            updateChatBoxes();
+            updateLogDisplay();
         }
 
         function renderDualBoards() {
@@ -602,7 +656,7 @@
             renderCreatorBoard();
         }
 
-        // 1. 自分が解く盤面（相手の壁は初期状態では非表示！ぶつかった壁のみ赤く表示）
+        // 1. 自分が解く盤面（相手の壁は非表示、ヒットしたもの・ゲームオーバー時のみ赤表示）
         function renderSolveBoard() {
             const container = document.getElementById('solve-board-container');
             container.innerHTML = '';
@@ -638,7 +692,6 @@
                 }
             }
 
-            // 相手の壁：解く盤面では通常非表示。ゲームオーバーまたはヒットした壁のみ赤で表示
             const cellSize = 36;
             const labelSize = 20;
 
@@ -712,7 +765,7 @@
             container.appendChild(board);
         }
 
-        // 移動・壁衝突・ターン交代のメインロジック
+        // 移動・壁衝突・ターン交代処理
         function tryMoveToCell(targetR, targetC) {
             if (state.gameOver || !state.isMyTurn) return;
 
@@ -720,7 +773,7 @@
             const curC = state.currentPos.c;
             const dr = Math.abs(targetR - curR);
             const dc = Math.abs(targetC - curC);
-            if ((dr + dc) !== 1) return; // 隣接マスのみ
+            if ((dr + dc) !== 1) return;
 
             let wallBlocked = false;
             let hitWallObj = null;
@@ -743,32 +796,30 @@
             const targetCoord = `${cols[targetR]}${targetC + 1}`;
 
             if (wallBlocked) {
-                // 壁にぶつかった！演出 ＆ ターン交代
                 showFullscreenSymbol('cross');
                 if (!state.hitWalls.some(hw => hw.type === hitWallObj.type && hw.r === hitWallObj.r && hw.c === hitWallObj.c)) {
                     state.hitWalls.push(hitWallObj);
                 }
-                state.logs.push(`${targetCoord} で壁に衝突！ターン交代`);
+                state.logs.push(`[ログ] ${targetCoord} で壁に衝突！ターン交代`);
                 state.isMyTurn = false;
                 updateGameUI();
 
                 if (state.gameMode === 'cpu') {
-                    setTimeout(() => triggerCpuTurn(), 1000);
+                    setTimeout(() => triggerCpuTurn(), 1200);
                 }
             } else {
-                // 成功：移動継続（自分のターン継続）
                 showFullscreenSymbol('circle');
                 state.currentPos = { r: targetR, c: targetC };
-                state.logs.push(`${targetCoord} へ移動成功！`);
+                state.logs.push(`[ログ] ${targetCoord} へ移動成功！`);
 
                 if (state.currentPos.r === state.mySolveGoal.r && state.currentPos.c === state.mySolveGoal.c) {
                     if (!state.suddenDeath) {
                         state.suddenDeath = true;
-                        state.logs.push('ゴール到達！サドンデス開始');
+                        state.logs.push('[システム] ゴール到達！サドンデス開始');
                         alert('ゴール到達！サドンデス：クリア出来たら引き分け！');
                     } else {
                         state.gameOver = true;
-                        state.logs.push('ゲームクリア！');
+                        state.logs.push('[システム] ゲームクリア！');
                         alert('クリア！ゲーム終了です！');
                     }
                 }
@@ -776,22 +827,23 @@
             }
         }
 
-        // CPUのターン処理
+        // 確実なCPUターン処理
         function triggerCpuTurn() {
             if (state.gameOver) return;
-            state.logs.push('CPUが迷路を探索中...');
-            updateLogBoxes();
+            state.logs.push('[CPU] 迷路を探索中...');
+            updateGameUI();
 
             setTimeout(() => {
+                if (state.gameOver) return;
                 const hit = Math.random() < 0.5;
                 if (hit) {
-                    state.logs.push('CPUが壁に衝突！あなたのターンへ');
+                    state.logs.push('[CPU] 壁に衝突しました！あなたのターンへ復帰');
                 } else {
-                    state.logs.push('CPUが1歩前進しました');
+                    state.logs.push('[CPU] 1歩前進しました。あなたのターンへ');
                 }
                 state.isMyTurn = true;
                 updateGameUI();
-            }, 1200);
+            }, 1500);
         }
 
         // 画面いっぱいの巨大シンボル演出（〇 と ☓ のみ）
@@ -813,66 +865,37 @@
             }, 550);
         }
 
-        // 4〜5行のログ画面の更新
-        function updateLogBoxes() {
-            const logText = state.logs.slice(-5).join('\n');
-            const gameLog = document.getElementById('game-log-box');
-            if (gameLog) {
-                gameLog.innerText = logText;
-                gameLog.scrollTop = gameLog.scrollHeight;
-            }
-            const specLog = document.getElementById('spec-log-box');
-            if (specLog) {
-                specLog.innerText = logText;
-                specLog.scrollTop = specLog.scrollHeight;
+        // ログ画面（直近4〜5行の表示）の更新
+        function updateLogDisplay() {
+            const lastLogs = state.logs.slice(-5).join('\n');
+            const box = document.getElementById('game-log-box');
+            if (box) {
+                box.innerText = lastLogs;
+                box.scrollTop = box.scrollHeight;
             }
         }
 
-        // チャット更新（対戦者は閲覧のみ、観戦者は送信可能）
-        function updateChatBoxes() {
-            const chatHtml = state.chats.map(c => `<div><strong>${c.name}:</strong> ${c.text}</div>`).join('');
-            const gameChat = document.getElementById('game-chat-messages');
-            if (gameChat) gameChat.innerHTML = chatHtml;
-            const specChat = document.getElementById('spec-chat-messages');
-            if (specChat) specChat.innerHTML = chatHtml;
-        }
-
-        // --- 観戦者画面 ---
-        function initSpectatorScreen() {
-            switchScreen('screen-spectator');
-            document.getElementById('spec-status').innerText = `観戦ルーム (${state.roomId})`;
-            renderSpectatorBoard();
-            updateLogBoxes();
-            updateChatBoxes();
-        }
-
-        function renderSpectatorBoard() {
-            const container = document.getElementById('spec-board-container');
-            container.innerHTML = '';
-            const board = document.createElement('div');
-            board.className = 'board';
-            board.appendChild(createLabel(''));
-            for (let c = 0; c < state.gridSize; c++) board.appendChild(createLabel(c + 1));
-            
-            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
-            for (let r = 0; r < state.gridSize; r++) {
-                board.appendChild(createLabel(cols[r]));
-                for (let c = 0; c < state.gridSize; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    board.appendChild(cell);
-                }
-            }
-            container.appendChild(board);
-        }
-
-        function sendSpecChat() {
-            const input = document.getElementById('spec-chat-input');
+        // チャット送信処理（観戦者用）
+        function sendChat() {
+            const input = document.getElementById('game-chat-input');
             const text = input.value.trim();
             if (!text) return;
-            state.chats.push({ name: `${state.name}(観戦)`, text: text });
+            state.logs.push(`[チャット] ${state.name}(観戦): ${text}`);
             input.value = '';
-            updateChatBoxes();
+            updateLogDisplay();
+        }
+
+        // 全履歴モーダルの制御
+        function openHistoryModal() {
+            const modal = document.getElementById('history-modal');
+            const historyBox = document.getElementById('modal-history-box');
+            historyBox.innerText = state.logs.join('\n');
+            modal.style.display = 'flex';
+            historyBox.scrollTop = historyBox.scrollHeight;
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').style.display = 'none';
         }
     </script>
 </body>
