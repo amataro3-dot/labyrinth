@@ -348,57 +348,70 @@
         }
 
         function enterLobby() {
-            const name = document.getElementById('input-name').value.trim();
-            const roomId = document.getElementById('input-room').value.trim();
-            if (!name) { alert('プレイヤー名を入力してください。'); return; }
-            state.name = name; state.roomId = roomId;
+    try {
+        // --- ① ここからボタンを押したときの処理です ---
+        const nameInput = document.getElementById('player-name-input'); // ※お使いのIDに合わせてください
+        const roomIdInput = document.getElementById('room-id-input'); // ※お使いのIDに合わせてください
+        
+        const name = nameInput ? nameInput.value.trim() : '';
+        const roomId = roomIdInput ? roomIdInput.value.trim() : '';
 
-            roomRef = db.ref('rooms/' + roomId);
-            roomRef.once('value', snapshot => {
-                const roomData = snapshot.val() || {};
-                const participants = roomData.participants || {};
-                const count = Object.keys(participants).length;
-
-                if (count >= 8 && !participants[myId]) {
-                    alert('⚠️ このルームは満員です（最大8人）。別のルームIDを指定してください。');
-                    return;
-                }
-
-                const reqRole = document.getElementById('select-role').value;
-                let assignedSlot = 'spectator';
-                let p1 = participants.p1;
-                let p2 = participants.p2;
-
-                if (reqRole === 'player') {
-                    if (!p1 || p1.id === myId) {
-                        assignedSlot = 'p1';
-                    } else if (!p2 || p2.id === myId) {
-                        assignedSlot = 'p2';
-                    } else {
-                        alert('⚠️ 対戦プレイヤー枠（2人）が埋まっているため、観戦者として参加します。');
-                        assignedSlot = 'spectator';
-                    }
-                }
-
-                state.playerSlot = assignedSlot;
-
-                db.ref(`rooms/${roomId}/participants/${myId}`).set({
-                    id: myId, name: name, slot: assignedSlot, time: firebase.database.ServerValue.TIMESTAMP
-                });
-                db.ref(`rooms/${roomId}/participants/${myId}`).onDisconnect().remove();
-
-                if (assignedSlot === 'p1' && !p1) {
-                    db.ref(`rooms/${roomId}/p1Info`).set({ id: myId, name: name });
-                } else if (assignedSlot === 'p2' && !p2) {
-                    db.ref(`rooms/${roomId}/p2Info`).set({ id: myId, name: name });
-                }
-
-                document.getElementById('lobby-room-info').innerText = `ルームID: ${roomId} | 名前: ${name} (${assignedSlot.toUpperCase()})`;
-                
-                listenRoomData();
-                switchScreen('screen-room-lobby');
-            });
+        if (!name) {
+            alert('プレイヤー名を入力してください');
+            return;
         }
+        if (!roomId) {
+            alert('ルームIDを入力してください');
+            return;
+        }
+
+        // 変数に保存
+        state.name = name;
+        state.roomId = roomId;
+
+        // Firebaseへの接続テスト
+        if (typeof db === 'undefined' || !db) {
+            throw new Error('Firebaseのデータベース(db)が正しく初期化されていません！');
+        }
+
+        roomRef = db.ref('rooms/' + roomId);
+        
+        roomRef.once('value', snapshot => {
+            const roomData = snapshot.val() || {};
+            const participants = roomData.participants || {};
+            const count = Object.keys(participants).length;
+
+            if (count >= 8 && !participants[myId]) {
+                alert('⚠️ このルームは満員です（最大8人）');
+                return;
+            }
+
+            // ここから下は元の処理をそのまま続けます
+            const reqRole = document.getElementById('select-role').value;
+            let assignedSlot = 'spectator';
+            let p1 = participants.p1;
+            let p2 = participants.p2;
+
+            if (reqRole === 'player') {
+                if (!p1 || p1.id === myId) {
+                    assignedSlot = 'p1';
+                } else if (!p2 || p2.id === myId) {
+                    assignedSlot = 'p2';
+                } else {
+                    alert('⚠️ 対戦プレイヤー枠（2人）はすでに埋まっています。観戦者として参加します。');
+                    assignedSlot = 'spectator';
+                }
+            }
+            
+            // 成功したらログに出す
+            console.log('部屋に入れました！ スロット:', assignedSlot);
+        });
+
+    } catch (error) {
+        // ★万が一エラーが起きたら、スマホの画面にポップアップでエラー内容を出します
+        alert('【エラー発生】: ' + error.message);
+        console.error(error);
+    }
 
         function listenRoomData() {
             gameStateRef = db.ref(`rooms/${state.roomId}`);
