@@ -567,6 +567,7 @@
 
             state.hitWalls = []; state.suddenDeath = false; state.suddenDeathPlayer = null; state.gameOver = false;
             state.isMyTurn = Math.random() < 0.5;
+            state.turnOrder = state.isMyTurn ? 'my' : 'opponent';
             state.logs = [`[System] Game Started! Wall count: ${state.wallCount}`];
             if (state.isMyTurn) {
                 state.logs.push(`[System] ${state.name} (You) goes first!`);
@@ -610,12 +611,18 @@
             const header = document.getElementById('game-turn-header');
             if (state.gameOver) {
                 header.innerText = 'ゲーム終了';
-            } else if (state.isMyTurn) {
-                header.innerText = state.suddenDeath ? 'サドンデス中 (あなたのターン)' : 'ゲーム進行中 (あなたのターン - 壁にぶつかるまで連続移動可)';
-                header.style.color = '#27ae60';
+                header.style.color = '#333';
             } else {
-                header.innerText = state.suddenDeath ? 'サドンデス中 (相手のターン)' : 'ゲーム進行中 (相手のターン)';
-                header.style.color = '#e74c3c';
+                const turnType = (state.isMyTurn === (state.turnOrder === 'my')) ? '先攻' : '後攻';
+                const currentTurnName = state.isMyTurn ? `${state.name} (あなた)` : (state.gameMode === 'cpu' ? 'CPU' : '相手');
+                
+                if (state.suddenDeath) {
+                    header.innerText = `サドンデス中 (${turnType}: ${currentTurnName}のターン)`;
+                    header.style.color = '#e67e22';
+                } else {
+                    header.innerText = `${turnType}: ${currentTurnName}のターン`;
+                    header.style.color = state.isMyTurn ? '#27ae60' : '#e74c3c';
+                }
             }
             renderDualBoards();
             updateLogDisplay();
