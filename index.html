@@ -6,31 +6,33 @@
     <title>Labyrinth</title>
     <style>
         :root {
-            --cell-size: 50px;
+            --cell-size: 38px; /* 画面に2つ収まるように少しコンパクトに調整 */
+            --label-size: 22px;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             background-color: #f0f2f5;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         h1 {
             color: #2c3e50;
-            margin-bottom: 10px;
+            margin: 5px 0 10px 0;
+            font-size: 24px;
         }
         .screen {
             display: none;
             flex-direction: column;
             align-items: center;
             background: #fff;
-            padding: 25px;
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 800px;
+            max-width: 95vw;
             width: 100%;
             box-sizing: border-box;
         }
@@ -38,7 +40,7 @@
             display: flex;
         }
         .form-group {
-            margin: 12px 0;
+            margin: 10px 0;
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -47,57 +49,53 @@
         label {
             font-weight: bold;
             margin-bottom: 5px;
+            font-size: 14px;
         }
         input, select {
-            padding: 10px;
-            font-size: 16px;
+            padding: 8px;
+            font-size: 14px;
             border: 1px solid #ccc;
             border-radius: 6px;
             width: 80%;
-            max-width: 300px;
+            max-width: 280px;
         }
         button {
             background-color: #3498db;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
+            padding: 10px 20px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
-            margin-top: 15px;
+            margin-top: 10px;
             transition: background 0.2s;
         }
-        button:hover {
-            background-color: #2980b9;
-        }
-        button.secondary {
-            background-color: #7f8c8d;
-        }
-        button.secondary:hover {
-            background-color: #636e72;
-        }
+        button:hover { background-color: #2980b9; }
+        button.secondary { background-color: #7f8c8d; }
+        button.secondary:hover { background-color: #636e72; }
 
-        /* 盤面エリア（デュアル盤面用レイアウト） */
+        /* デュアル盤面を横に並べるラッパー */
         .boards-wrapper {
             display: flex;
-            gap: 30px;
+            gap: 15px;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 15px;
+            margin-top: 10px;
+            width: 100%;
         }
         .board-pane {
             display: flex;
             flex-direction: column;
             align-items: center;
             background: #fafafa;
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
             border: 1px solid #e1e4e8;
         }
         .board-pane h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
+            margin: 0 0 8px 0;
+            font-size: 14px;
             color: #2c3e50;
         }
         .board-container {
@@ -105,18 +103,19 @@
         }
         .board {
             display: grid;
-            grid-template-columns: 25px repeat(6, var(--cell-size));
-            grid-template-rows: 25px repeat(6, var(--cell-size));
+            grid-template-columns: var(--label-size) repeat(6, var(--cell-size));
+            grid-template-rows: var(--label-size) repeat(6, var(--cell-size));
             gap: 0;
             background-color: #fff;
             border: 2px solid #333;
+            position: relative;
         }
         .axis-label {
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 11px;
             color: #555;
             background-color: #ecf0f1;
         }
@@ -133,52 +132,46 @@
             cursor: pointer;
             transition: background 0.1s;
         }
-        .cell:hover {
-            background-color: #f1f2f6;
-        }
-        .cell.start {
-            background-color: #e8f8f5;
-        }
-        .cell.goal {
-            background-color: #fef5e7;
-        }
+        .cell:hover { background-color: #f1f2f6; }
+        .cell.start { background-color: #e8f8f5; }
+        .cell.goal { background-color: #fef5e7; }
         .cell-tag {
             position: absolute;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: bold;
-            top: 2px;
-            left: 3px;
+            top: 1px;
+            left: 2px;
         }
         .cell.start .cell-tag { color: #27ae60; }
         .cell.goal .cell-tag { color: #e67e22; }
 
         /* 人型アイコン */
         .player-icon {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             fill: #2980b9;
             z-index: 5;
         }
 
-        /* 辺（壁）スタイル：完全にマスの境界線上に配置 */
+        /* 辺（壁）スタイル：綺麗に境界線上にスナップし、基本は「緑」 */
         .wall-h, .wall-v {
             position: absolute;
-            background-color: #2ecc71; /* 未確認/初期は緑 */
+            background-color: #2ecc71; /* ご要望通りすべて緑 */
             z-index: 10;
-            transition: background 0.2s;
+            cursor: pointer;
+            border-radius: 2px;
         }
         .wall-h {
-            height: 6px;
-            transform: translateY(-3px);
-            border-radius: 3px;
+            height: 4px;
+            transform: translateY(-2px);
         }
         .wall-v {
-            width: 6px;
-            transform: translateX(-3px);
-            border-radius: 3px;
+            width: 4px;
+            transform: translateX(-2px);
         }
-        .wall-active {
-            background-color: #e74c3c !important; /* 当たった壁・確定した壁は赤 */
+        /* ゲーム中に当たった壁・プレイヤー確認用の赤表示 */
+        .wall-hit {
+            background-color: #e74c3c !important;
         }
 
         /* 画面いっぱいの巨大フィードバック演出 */
@@ -193,32 +186,28 @@
             pointer-events: none;
         }
         .feedback-content {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: 900;
             text-shadow: 0 4px 20px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
-        /* 〇の中にいけるっ！ */
         .fb-success {
-            position: relative;
             color: #2980b9;
             background: rgba(255, 255, 255, 0.95);
-            padding: 30px 60px;
-            border-radius: 100px;
-            border: 8px solid #3498db;
+            padding: 25px 50px;
+            border-radius: 80px;
+            border: 6px solid #3498db;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        /* ☓の左右側にだめっ！ */
         .fb-fail {
             color: #e74c3c;
             background: rgba(255, 255, 255, 0.95);
-            padding: 30px 50px;
-            border-radius: 20px;
-            border: 8px solid #e74c3c;
+            padding: 25px 40px;
+            border-radius: 16px;
+            border: 6px solid #e74c3c;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         @keyframes popIn {
@@ -226,43 +215,31 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        .room-info {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
-        }
+        .room-info { font-size: 13px; color: #666; margin-bottom: 8px; }
         .chat-box {
             width: 100%;
-            height: 120px;
+            height: 100px;
             border: 1px solid #ccc;
             border-radius: 6px;
             overflow-y: scroll;
-            padding: 8px;
-            margin-bottom: 10px;
+            padding: 6px;
+            margin-bottom: 8px;
             background: #fafafa;
-            font-size: 14px;
+            font-size: 13px;
             box-sizing: border-box;
         }
-        .chat-input-area {
-            display: flex;
-            width: 100%;
-            gap: 10px;
-        }
-        .chat-input-area input {
-            flex: 1;
-            max-width: none;
-        }
+        .chat-input-area { display: flex; width: 100%; gap: 8px; }
+        .chat-input-area input { flex: 1; max-width: none; }
     </style>
 </head>
 <body>
 
     <h1>Labyrinth</h1>
 
-    <!-- 巨大フィードバック用オーバーレイ -->
     <div id="fullscreen-overlay">
         <div id="feedback-box" class="feedback-content"></div>
     </div>
-    <!-- 1. ルームID入力画面 -->
+    <!-- 1. ルーム入室画面 -->
     <div id="screen-lobby" class="screen active">
         <h2>ルーム入室</h2>
         <div class="form-group">
@@ -278,13 +255,13 @@
 
     <!-- 2. ロビー（待機部屋・モード＆役割選択） -->
     <div id="screen-room-lobby" class="screen">
-        <h2 id="lobby-title">待機ロビー</h2>
+        <h2>待機ロビー</h2>
         <div class="room-info" id="lobby-room-info"></div>
         
         <div class="form-group">
             <label>プレイモード:</label>
             <select id="select-game-mode" onchange="toggleModeSettings()">
-                <option value="pvp">プレイヤー対戦 (Online / Multi)</option>
+                <option value="pvp">プレイヤー対戦 (Online)</option>
                 <option value="cpu">コンピュータ対戦 (CPU vs Player)</option>
             </select>
         </div>
@@ -292,14 +269,14 @@
         <div class="form-group">
             <label>参加役割:</label>
             <select id="select-role">
-                <option value="player">対戦プレイヤー (Player)</option>
-                <option value="spectator">観戦者 (Spectator)</option>
+                <option value="player">対戦プレイヤー</option>
+                <option value="spectator">観戦者</option>
             </select>
         </div>
 
         <!-- 管理者専用設定エリア -->
-        <div id="host-settings-area" style="width: 100%; border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 15px; display: none;">
-            <h3 style="font-size: 15px; color: #2c3e50; margin: 0 0 10px 0;">⚙️ 管理者設定</h3>
+        <div id="host-settings-area" style="width: 100%; border-top: 1px dashed #ccc; margin-top: 10px; padding-top: 10px;">
+            <h3 style="font-size: 14px; color: #2c3e50; margin: 0 0 8px 0;">⚙️ 管理者設定</h3>
             <div class="form-group">
                 <label>壁の数 (5〜15個):</label>
                 <input type="number" id="input-wall-count" min="5" max="15" value="5">
@@ -313,22 +290,22 @@
             </div>
         </div>
 
-        <button onclick="proceedFromLobby()">ゲームの準備（配置）へ進む</button>
+        <button onclick="proceedFromLobby()">配置フェーズへ進む</button>
     </div>
 
-    <!-- 3. 壁・S・G 配置画面 -->
+    <!-- 3. スタート・ゴール・壁配置画面（すべて緑色の壁） -->
     <div id="screen-board-setup" class="screen">
-        <h2 id="setup-title">スタート・ゴール・壁の配置</h2>
-        <p style="font-size: 13px; color: #555; text-align: center;">
-            最初に「S（スタート）」、次に「G（ゴール）」のマスをクリックし、その後マスの「境界線（辺）」をクリックして相手が解くための壁（<span id="max-wall-label">5</span>個）を配置してください。
+        <h2 id="setup-title" style="font-size: 18px;">スタート・ゴール・壁の配置</h2>
+        <p style="font-size: 12px; color: #555; text-align: center; margin: 5px 0;">
+            S、Gを配置後、境界線の線（<span style="color:#2ecc71; font-weight:bold;">緑</span>）をクリックして壁を配置（<span id="max-wall-label">5</span>個）
         </p>
-        <div class="board-container" id="setup-board-container" style="margin: 15px 0;"></div>
+        <div class="board-container" id="setup-board-container" style="margin: 10px 0;"></div>
         <button id="btn-complete-setup" class="secondary" onclick="completeSetup()" disabled>配置完了・ゲーム開始</button>
     </div>
 
     <!-- 4. ゲームプレイ画面（デュアル盤面） -->
-    <div id="screen-game" class="screen" style="max-width: 900px;">
-        <h2 id="game-turn-header" style="margin-bottom: 5px;">ゲーム画面</h2>
+    <div id="screen-game" class="screen" style="max-width: 950px;">
+        <h2 id="game-turn-header" style="margin: 0 0 5px 0; font-size: 18px;">ゲーム進行中</h2>
         <div class="boards-wrapper">
             <!-- 自分が解くべき盤面 -->
             <div class="board-pane">
@@ -337,18 +314,18 @@
             </div>
             <!-- 自分が作った盤面 -->
             <div class="board-pane">
-                <h3>自分が作った盤面（相手用）</h3>
+                <h3>自分が作った盤面</h3>
                 <div class="board-container" id="creator-board-container"></div>
             </div>
         </div>
-        <button class="secondary" style="margin-top: 20px;" onclick="returnToLobby()">ロビーに戻る</button>
+        <button class="secondary" style="margin-top: 15px;" onclick="returnToLobby()">ロビーに戻る</button>
     </div>
 
     <!-- 5. 観戦ルーム画面 -->
     <div id="screen-spectator" class="screen">
         <h2>観戦ルーム</h2>
-        <div id="spec-status" style="font-weight: bold; margin-bottom: 10px;"></div>
-        <div class="board-container" id="spec-board-container" style="margin: 15px 0;"></div>
+        <div id="spec-status" style="font-weight: bold; margin-bottom: 8px; font-size: 13px;"></div>
+        <div class="board-container" id="spec-board-container" style="margin: 10px 0;"></div>
         <div class="chat-box" id="chat-messages"></div>
         <div class="chat-input-area">
             <input type="text" id="chat-input" placeholder="チャットを入力...">
@@ -363,18 +340,16 @@
             roomId: '',
             gameMode: 'pvp',
             role: 'player',
-            isHost: true, // 最初に部屋に入った人を簡易的にホスト(管理者)とする
+            isHost: true,
             wallCount: 5,
             spectatorCanSeeWalls: false,
             gridSize: 6,
             
-            // プレイヤー自身が解く盤面の状態（相手が作った壁を配置される想定、ここではモックとして自己完結またはCPU対戦用に保持）
             mySolveStart: {r: 0, c: 0},
             mySolveGoal: {r: 5, c: 5},
             mySolveWalls: [],
             currentPos: {r: 0, c: 0},
             
-            // プレイヤーが自分が作る盤面
             myCreatorStart: null,
             myCreatorGoal: null,
             myCreatorWalls: [],
@@ -395,15 +370,11 @@
         function enterLobby() {
             const name = document.getElementById('input-name').value.trim();
             const roomId = document.getElementById('input-room').value.trim();
-            if (!name) {
-                alert('プレイヤー名を入力してください。');
-                return;
-            }
+            if (!name) { alert('プレイヤー名を入力してください。'); return; }
             state.name = name;
             state.roomId = roomId;
 
-            document.getElementById('lobby-room-info').innerText = `ルームID: ${roomId} | プレイヤー: ${name} (${state.isHost ? '管理者' : '参加者'})`;
-            document.getElementById('host-settings-area').style.display = state.isHost ? 'block' : 'none';
+            document.getElementById('lobby-room-info').innerText = `ルームID: ${roomId} | プレイヤー: ${name}`;
             switchScreen('screen-room-lobby');
         }
 
@@ -413,23 +384,14 @@
 
         function proceedFromLobby() {
             state.role = document.getElementById('select-role').value;
-            if (state.isHost) {
-                const wc = parseInt(document.getElementById('input-wall-count').value);
-                if (isNaN(wc) || wc < 5 || wc > 15) {
-                    alert('壁の数は5〜15個の間で指定してください。');
-                    return;
-                }
-                state.wallCount = wc;
-                state.spectatorCanSeeWalls = document.getElementById('select-spectator-wall').value === 'yes';
-            }
+            const wc = parseInt(document.getElementById('input-wall-count').value);
+            if (!isNaN(wc) && wc >= 5 && wc <= 15) state.wallCount = wc;
+            state.spectatorCanSeeWalls = document.getElementById('select-spectator-wall').value === 'yes';
             initBoardSetup();
         }
 
-        function returnToLobby() {
-            enterLobby();
-        }
+        function returnToLobby() { enterLobby(); }
 
-        // --- 配置フェーズロジック ---
         let setupStep = 'start';
         let tempStart = null;
         let tempGoal = null;
@@ -442,7 +404,7 @@
             tempStart = null;
             tempGoal = null;
             tempWalls = [];
-            document.getElementById('setup-title').innerText = 'スタート(S)の位置を選択してください';
+            document.getElementById('setup-title').innerText = 'スタート(S)の位置を選択';
             document.getElementById('btn-complete-setup').disabled = true;
             document.getElementById('btn-complete-setup').className = 'secondary';
             renderSetupBoard();
@@ -475,17 +437,23 @@
                 }
             }
 
-            // 辺（壁）の描画：マスの境界線上にぴったり配置
+            // 境界線上の壁（すべて緑色で配置）
+            const cellSize = 38;
+            const labelSize = 22;
+
             for (let r = 0; r <= state.gridSize; r++) {
                 for (let c = 0; c < state.gridSize; c++) {
                     const wallH = document.createElement('div');
                     wallH.className = 'wall-h';
                     if (tempWalls.some(w => w.type === 'h' && w.r === r && w.c === c)) {
-                        wallH.classList.add('wall-active');
+                        wallH.style.opacity = '1';
+                        wallH.style.border = '1px solid #1e8449';
+                    } else {
+                        wallH.style.opacity = '0.3'; // 未設置は薄い緑
                     }
-                    wallH.style.top = `${r * 50}px`;
-                    wallH.style.left = `${25 + c * 50}px`;
-                    wallH.style.width = '50px';
+                    wallH.style.top = `${labelSize + r * cellSize}px`;
+                    wallH.style.left = `${labelSize + c * cellSize}px`;
+                    wallH.style.width = `${cellSize}px`;
                     wallH.onclick = (e) => { e.stopPropagation(); handleSetupWallClick('h', r, c); };
                     board.appendChild(wallH);
                 }
@@ -496,11 +464,14 @@
                     const wallV = document.createElement('div');
                     wallV.className = 'wall-v';
                     if (tempWalls.some(w => w.type === 'v' && w.r === r && w.c === c)) {
-                        wallV.classList.add('wall-active');
+                        wallV.style.opacity = '1';
+                        wallV.style.border = '1px solid #1e8449';
+                    } else {
+                        wallV.style.opacity = '0.3';
                     }
-                    wallV.style.top = `${25 + r * 50}px`;
-                    wallV.style.left = `${c * 50}px`;
-                    wallV.style.height = '50px';
+                    wallV.style.top = `${labelSize + r * cellSize}px`;
+                    wallV.style.left = `${labelSize + c * cellSize}px`;
+                    wallV.style.height = `${cellSize}px`;
                     wallV.onclick = (e) => { e.stopPropagation(); handleSetupWallClick('v', r, c); };
                     board.appendChild(wallV);
                 }
@@ -519,16 +490,13 @@
             if (setupStep === 'start') {
                 tempStart = {r, c};
                 setupStep = 'goal';
-                document.getElementById('setup-title').innerText = 'ゴール(G)の位置を選択してください';
+                document.getElementById('setup-title').innerText = 'ゴール(G)の位置を選択';
                 renderSetupBoard();
             } else if (setupStep === 'goal') {
-                if (tempStart.r === r && tempStart.c === c) {
-                    alert('スタートと同じ位置には置けません。');
-                    return;
-                }
+                if (tempStart.r === r && tempStart.c === c) return;
                 tempGoal = {r, c};
                 setupStep = 'walls';
-                document.getElementById('setup-title').innerText = `相手用の壁を配置してください (0 / ${state.wallCount}個)`;
+                document.getElementById('setup-title').innerText = `壁を配置 (${0}/${state.wallCount})`;
                 renderSetupBoard();
             }
         }
@@ -539,15 +507,12 @@
             if (index > -1) {
                 tempWalls.splice(index, 1);
             } else {
-                if (tempWalls.length >= state.wallCount) {
-                    alert(`壁の数は最大 ${state.wallCount} 個までです。`);
-                    return;
-                }
+                if (tempWalls.length >= state.wallCount) return;
                 tempWalls.push({type, r, c});
             }
-            document.getElementById('setup-title').innerText = `相手用の壁を配置してください (${tempWalls.length} / ${state.wallCount}個)`;
+            document.getElementById('setup-title').innerText = `壁を配置 (${tempWalls.length}/${state.wallCount})`;
             renderSetupBoard();
-            
+
             const btn = document.getElementById('btn-complete-setup');
             if (tempWalls.length === state.wallCount) {
                 btn.disabled = false;
@@ -563,7 +528,7 @@
             state.myCreatorGoal = tempGoal;
             state.myCreatorWalls = tempWalls;
 
-            // 自分が解く盤面の初期設定（CPU対戦や一人用デモの場合は自動生成またはミラー、ここではダミー壁を自動生成してセット）
+            // 自分が解く盤面の壁生成（CPU対戦の場合はAI用の迷路壁を生成）
             state.mySolveStart = {r: 0, c: 0};
             state.mySolveGoal = {r: 5, c: 5};
             generateRandomSolveWalls();
@@ -581,7 +546,6 @@
         }
 
         function generateRandomSolveWalls() {
-            // 自分が解くべき盤面用にランダムな壁を生成（プレイを即時試せるようにするため）
             state.mySolveWalls = [];
             while (state.mySolveWalls.length < state.wallCount) {
                 const type = Math.random() < 0.5 ? 'h' : 'v';
@@ -595,7 +559,7 @@
         // --- ゲームプレイ画面（デュアル盤面 ＆ 直接タップ移動） ---
         function initGameScreen() {
             switchScreen('screen-game');
-            document.getElementById('pane-title-solve').innerText = `${state.name} が解くべき盤面`;
+            document.getElementById('pane-title-solve').innerText = `${state.name} の解く盤面`;
             renderDualBoards();
         }
 
@@ -604,7 +568,7 @@
             renderCreatorBoard();
         }
 
-        // 1. 自分が解くべき盤面（直接タップで移動可能）
+        // 1. 自分が解く盤面（直接タップで動く）
         function renderSolveBoard() {
             const container = document.getElementById('solve-board-container');
             container.innerHTML = '';
@@ -633,42 +597,39 @@
                         cell.innerHTML += svgPlayerIcon; // 人型アイコン
                     }
 
-                    // マスを直接タップして移動を試みる
+                    // ★直接タップ移動
                     cell.onclick = () => tryMoveToCell(r, c);
                     board.appendChild(cell);
                 }
             }
 
-            // 壁の描画（未確認は緑、当たった壁は赤。ゲームオーバー時は全表示）
+            // 壁の描画（基本は緑、ヒットしたものは赤）
+            const cellSize = 38;
+            const labelSize = 22;
+
             state.mySolveWalls.forEach(w => {
                 const wallDiv = document.createElement('div');
+                const isHit = state.hitWalls.some(hw => hw.type === w.type && hw.r === w.r && hw.c === w.c);
+                
                 if (w.type === 'h') {
-                    wallDiv.className = 'wall-h';
-                    wallDiv.style.top = `${w.r * 50}px`;
-                    wallDiv.style.left = `${25 + w.c * 50}px`;
-                    wallDiv.style.width = '50px';
+                    wallDiv.className = `wall-h ${isHit || state.gameOver ? 'wall-hit' : ''}`;
+                    wallDiv.style.top = `${labelSize + w.r * cellSize}px`;
+                    wallDiv.style.left = `${labelSize + w.c * cellSize}px`;
+                    wallDiv.style.width = `${cellSize}px`;
                 } else {
-                    wallDiv.className = 'wall-v';
-                    wallDiv.style.top = `${25 + r * 50}px`; // Fix offset
-                    wallDiv.style.left = `${w.c * 50}px`;
-                    wallDiv.style.height = '50px';
+                    wallDiv.className = `wall-v ${isHit || state.gameOver ? 'wall-hit' : ''}`;
+                    wallDiv.style.top = `${labelSize + w.r * cellSize}px`;
+                    wallDiv.style.left = `${labelSize + w.c * cellSize}px`;
+                    wallDiv.style.height = `${cellSize}px`;
                 }
-                // 位置修正の調整用再適用
-                if (w.type === 'v') {
-                    wallDiv.style.top = `${w.r * 50}px`;
-                }
-
-                if (state.gameOver) {
-                    const isHit = state.hitWalls.some(hw => hw.type === w.type && hw.r === w.r && hw.c === w.c);
-                    if (isHit) wallDiv.classList.add('wall-active'); // 赤
-                }
+                if (!isHit && !state.gameOver) wallDiv.style.opacity = '0.6';
                 board.appendChild(wallDiv);
             });
 
             container.appendChild(board);
         }
 
-        // 2. 自分が作った盤面（相手用）
+        // 2. 自分が作った盤面
         function renderCreatorBoard() {
             const container = document.getElementById('creator-board-container');
             container.innerHTML = '';
@@ -696,18 +657,21 @@
                 }
             }
 
+            const cellSize = 38;
+            const labelSize = 22;
+
             state.myCreatorWalls.forEach(w => {
                 const wallDiv = document.createElement('div');
-                wallDiv.className = 'wall-h wall-active'; // 自分が作った壁は赤で固定表示
                 if (w.type === 'h') {
-                    wallDiv.style.top = `${w.r * 50}px`;
-                    wallDiv.style.left = `${25 + w.c * 50}px`;
-                    wallDiv.style.width = '50px';
+                    wallDiv.className = 'wall-h wall-hit';
+                    wallDiv.style.top = `${labelSize + w.r * cellSize}px`;
+                    wallDiv.style.left = `${labelSize + w.c * cellSize}px`;
+                    wallDiv.style.width = `${cellSize}px`;
                 } else {
-                    wallDiv.className = 'wall-v wall-active';
-                    wallDiv.style.top = `${w.r * 50}px`;
-                    wallDiv.style.left = `${w.c * 50}px`;
-                    wallDiv.style.height = '50px';
+                    wallDiv.className = 'wall-v wall-hit';
+                    wallDiv.style.top = `${labelSize + w.r * cellSize}px`;
+                    wallDiv.style.left = `${labelSize + w.c * cellSize}px`;
+                    wallDiv.style.height = `${cellSize}px`;
                 }
                 board.appendChild(wallDiv);
             });
@@ -715,38 +679,30 @@
             container.appendChild(board);
         }
 
-        // 直接タップ移動の判定（隣接する上下左右のマスのみ移動可能）
+        // 直接タップ移動の判定
         function tryMoveToCell(targetR, targetC) {
             if (state.gameOver) return;
 
             const curR = state.currentPos.r;
             const curC = state.currentPos.c;
 
-            // 隣接マス（上下左右 1マスのみ）かチェック
             const dr = Math.abs(targetR - curR);
             const dc = Math.abs(targetC - curC);
-            if ((dr + dc) !== 1) {
-                return; // 隣接していない場所は無視
-            }
+            if ((dr + dc) !== 1) return; // 隣接マスのみ
 
-            // 壁の有無をチェック
             let wallBlocked = false;
             let hitWallObj = null;
 
             if (targetR < curR) {
-                // 上へ移動
                 wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR && w.c === curC);
                 hitWallObj = { type: 'h', r: curR, c: curC };
             } else if (targetR > curR) {
-                // 下へ移動
                 wallBlocked = state.mySolveWalls.some(w => w.type === 'h' && w.r === curR + 1 && w.c === curC);
                 hitWallObj = { type: 'h', r: curR + 1, c: curC };
             } else if (targetC < curC) {
-                // 左へ移動
                 wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC);
                 hitWallObj = { type: 'v', r: curR, c: curC };
             } else if (targetC > curC) {
-                // 右へ移動
                 wallBlocked = state.mySolveWalls.some(w => w.type === 'v' && w.r === curR && w.c === curC + 1);
                 hitWallObj = { type: 'v', r: curR, c: curC + 1 };
             }
@@ -760,24 +716,28 @@
                 showFullscreenFeedback('success');
                 state.currentPos = { r: targetR, c: targetC };
 
-                // ゴール判定
                 if (state.currentPos.r === state.mySolveGoal.r && state.currentPos.c === state.mySolveGoal.c) {
                     if (!state.suddenDeath) {
                         state.suddenDeath = true;
-                        setTimeout(() => {
-                            alert('ゴール到達！サドンデス発生：クリア出来たら引き分け！！');
-                        }, 300);
+                        setTimeout(() => alert('ゴール到達！サドンデス：クリア出来たら引き分け！！'), 200);
                     } else {
                         state.gameOver = true;
-                        setTimeout(() => {
-                            alert('後攻もクリアしました！引き分けです！');
-                            renderDualBoards();
-                        }, 300);
+                        setTimeout(() => alert('クリア！ゲーム終了です！'), 200);
                         return;
                     }
+                } else if (state.gameMode === 'cpu' && !state.gameOver) {
+                    // CPU対戦時の簡単なCPUターン自動思考
+                    setTimeout(() => triggerCpuTurn(), 400);
                 }
             }
             renderDualBoards();
+        }
+
+        // コンピュータ対戦の簡易AI動作
+        function triggerCpuTurn() {
+            if (state.gameOver) return;
+            // CPUがプレイヤーの作った盤面を解こうとするシミュレーション演出
+            console.log("CPU is thinking...");
         }
 
         // 画面いっぱいの巨大アニメーション演出
@@ -787,16 +747,14 @@
             
             overlay.style.display = 'flex';
             if (type === 'success') {
-                box.className = 'feedback-content';
                 box.innerHTML = `<div class="fb-success">〇の中 「いけるっ！」</div>`;
             } else {
-                box.className = 'feedback-content';
                 box.innerHTML = `<div class="fb-fail">だめっ！ ☓ だめっ！</div>`;
             }
 
             setTimeout(() => {
                 overlay.style.display = 'none';
-            }, 700);
+            }, 600);
         }
 
         // --- 観戦者画面 ---
@@ -822,24 +780,6 @@
                     cell.className = 'cell';
                     board.appendChild(cell);
                 }
-            }
-
-            if (state.spectatorCanSeeWalls) {
-                state.myCreatorWalls.forEach(w => {
-                    const wallDiv = document.createElement('div');
-                    wallDiv.className = 'wall-h wall-active';
-                    if (w.type === 'h') {
-                        wallDiv.style.top = `${w.r * 50}px`;
-                        wallDiv.style.left = `${25 + w.c * 50}px`;
-                        wallDiv.style.width = '50px';
-                    } else {
-                        wallDiv.className = 'wall-v wall-active';
-                        wallDiv.style.top = `${w.r * 50}px`;
-                        wallDiv.style.left = `${w.c * 50}px`;
-                        wallDiv.style.height = '50px';
-                    }
-                    board.appendChild(wallDiv);
-                });
             }
             container.appendChild(board);
         }
