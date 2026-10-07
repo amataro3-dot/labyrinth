@@ -265,7 +265,7 @@
     <div id="screen-board-setup" class="screen">
         <h2 id="setup-title" style="font-size: 16px;">スタート・ゴール・壁の配置</h2>
         <p style="font-size: 11px; color: #555; text-align: center; margin: 4px 0;">
-            S、Gを配置後、境界線の線（<span style="color:#2ecc71; font-weight:bold;">緑</span>）をクリックして壁を配置（<span id="max-wall-label">5</span>個）
+            S, Gを配置後、境界線の線（<span style="color:#2ecc71; font-weight:bold;">緑</span>）をクリックして壁を配置（<span id="max-wall-label">5</span>個）
         </p>
         <div class="board-container" id="setup-board-container" style="margin: 6px 0;"></div>
         <button id="btn-complete-setup" class="secondary" onclick="completeSetup()" disabled>配置完了・ゲーム開始待ち</button>
@@ -298,17 +298,10 @@
     </div>
     <script>
         // ==========================================
-        // 1. Firebase 設定
+        // 1. Firebase 設定 (labyrinth-game-bc5aa)
         // ==========================================
         const firebaseConfig = {
-            apiKey: "AIzaSyBxf-38qXL-cUFIdJFd_x0JCJyXlHOKZHE",
-            authDomain: "labyrinth-game-bc5aa.firebaseapp.com",
-            databaseURL: "https://labyrinth-game-bc5aa-default-rtdb.firebaseio.com",
-            projectId: "labyrinth-game-bc5aa",
-            storageBucket: "labyrinth-game-bc5aa.firebasestorage.app",
-            messagingSenderId: "534431752677",
-            appId: "1:534431752677:web:8e4a3264841f2d4fe50f0c",
-            measurementId: "G-9RCH8Y8LKM"
+            databaseURL: "https://labyrinth-game-bc5aa-default-rtdb.firebaseio.com/"
         };
 
         if (!firebase.apps.length) {
@@ -316,7 +309,7 @@
         }
         const db = firebase.database();
 
-        let myId = 'user_' + Math.random().toString(36).substring(2, 9);
+        let myId = 'user_' + Math.random().toString(36.substring(2, 9));
         let roomRef = null;
         let gameStateRef = null;
 
@@ -348,70 +341,57 @@
         }
 
         function enterLobby() {
-    try {
-        // --- ① ここからボタンを押したときの処理です ---
-        const nameInput = document.getElementById('player-name-input'); // ※お使いのIDに合わせてください
-        const roomIdInput = document.getElementById('room-id-input'); // ※お使いのIDに合わせてください
-        
-        const name = nameInput ? nameInput.value.trim() : '';
-        const roomId = roomIdInput ? roomIdInput.value.trim() : '';
+            const name = document.getElementById('input-name').value.trim();
+            const roomId = document.getElementById('input-room').value.trim();
+            if (!name) { alert('プレイヤー名を入力してください。'); return; }
+            state.name = name; state.roomId = roomId;
 
-        if (!name) {
-            alert('プレイヤー名を入力してください');
-            return;
-        }
-        if (!roomId) {
-            alert('ルームIDを入力してください');
-            return;
-        }
+            roomRef = db.ref('rooms/' + roomId);
+            roomRef.once('value', snapshot => {
+                const roomData = snapshot.val() || {};
+                const participants = roomData.participants || {};
+                const count = Object.keys(participants).length;
 
-        // 変数に保存
-        state.name = name;
-        state.roomId = roomId;
-
-        // Firebaseへの接続テスト
-        if (typeof db === 'undefined' || !db) {
-            throw new Error('Firebaseのデータベース(db)が正しく初期化されていません！');
-        }
-
-        roomRef = db.ref('rooms/' + roomId);
-        
-        roomRef.once('value', snapshot => {
-            const roomData = snapshot.val() || {};
-            const participants = roomData.participants || {};
-            const count = Object.keys(participants).length;
-
-            if (count >= 8 && !participants[myId]) {
-                alert('⚠️ このルームは満員です（最大8人）');
-                return;
-            }
-
-            // ここから下は元の処理をそのまま続けます
-            const reqRole = document.getElementById('select-role').value;
-            let assignedSlot = 'spectator';
-            let p1 = participants.p1;
-            let p2 = participants.p2;
-
-            if (reqRole === 'player') {
-                if (!p1 || p1.id === myId) {
-                    assignedSlot = 'p1';
-                } else if (!p2 || p2.id === myId) {
-                    assignedSlot = 'p2';
-                } else {
-                    alert('⚠️ 対戦プレイヤー枠（2人）はすでに埋まっています。観戦者として参加します。');
-                    assignedSlot = 'spectator';
+                if (count >= 8 && !participants[myId]) {
+                    alert('⚠️ このルームは満員です（最大8人）。別のルームIDを指定してください。');
+                    return;
                 }
-            }
-            
-            // 成功したらログに出す
-            console.log('部屋に入れました！ スロット:', assignedSlot);
-        });
 
-    } catch (error) {
-        // ★万が一エラーが起きたら、スマホの画面にポップアップでエラー内容を出します
-        alert('【エラー発生】: ' + error.message);
-        console.error(error);
-    }
+                const reqRole = document.getElementById('select-role').value;
+                let assignedSlot = 'spectator';
+                let p1 = participants.p1;
+                let p2 = participants.p2;
+
+                if (reqRole === 'player') {
+                    if (!p1 || p1.id === myId) {
+                        assignedSlot = 'p1';
+                    } else if (!p2 || p2.id === myId) {
+                        assignedSlot = 'p2';
+                    } else {
+                        alert('⚠️ 対戦プレイヤー枠（2人）が埋まっているため、観戦者として参加します。');
+                        assignedSlot = 'spectator';
+                    }
+                }
+
+                state.playerSlot = assignedSlot;
+
+                db.ref(`rooms/${roomId}/participants/${myId}`).set({
+                    id: myId, name: name, slot: assignedSlot, time: firebase.database.ServerValue.TIMESTAMP
+                });
+                db.ref(`rooms/${roomId}/participants/${myId}`).onDisconnect().remove();
+
+                if (assignedSlot === 'p1' && !p1) {
+                    db.ref(`rooms/${roomId}/p1Info`).set({ id: myId, name: name });
+                } else if (assignedSlot === 'p2' && !p2) {
+                    db.ref(`rooms/${roomId}/p2Info`).set({ id: myId, name: name });
+                }
+
+                document.getElementById('lobby-room-info').innerText = `ルームID: ${roomId} | 名前: ${name} (${assignedSlot.toUpperCase()})`;
+                
+                listenRoomData();
+                switchScreen('screen-room-lobby');
+            });
+        }
 
         function listenRoomData() {
             gameStateRef = db.ref(`rooms/${state.roomId}`);
@@ -617,8 +597,7 @@
                 }
             });
         }
-
-        function initGameScreen() {
+function initGameScreen() {
             switchScreen('screen-game');
             updateGameUI();
         }
@@ -627,7 +606,7 @@
             const header = document.getElementById('game-turn-header');
             const isMyTurn = (state.playerSlot === state.turn);
             const currentTurnName = (state.turn === 'p1') ? state.p1Name : state.p2Name;
-            const turnType = (state.turn === state.turnOrder) ? '先攻' : '后攻';
+            const turnType = (state.turn === state.turnOrder) ? '先攻' : '後攻';
 
             if (state.gameOver) {
                 header.innerText = 'ゲーム終了';
