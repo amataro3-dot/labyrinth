@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -26,12 +26,12 @@
 </section>
 <section id="game" hidden>
  <h3 id="t1"></h3><svg id="b1" viewBox="0 0 354 354"></svg>
- <div id="lg"></div>
- <div class="row"><button id="al">全ログ</button><button id="back" hidden>ロビーに戻る</button></div>
+  <div class="lgrow"><div id="lg"></div><button id="al">全ログ</button></div>
+ <button id="back" hidden>ロビーに戻る</button>
  <h3 id="t2"></h3><svg id="b2" viewBox="0 0 354 354"></svg>
  <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
 </section>
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=3"></script>
+<script type="module" src="main.js?v=4"></script>
 </body></html>
