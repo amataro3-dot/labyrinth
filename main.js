@@ -128,7 +128,7 @@ function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
   else if(st==="sudden")h=`<div class="huge">サドンデス！！！</div><div class="sm">${esc(PN(b))}さん、ゴール出来なかったら負け！</div>`;
   else if(st==="end")h=g.res==="draw"?`<div class="huge">引き分け！！</div>`:`<div class="big">${esc(PN(g.res))}さんの勝ち！！</div>`}
  $("#ov").innerHTML=h;$("#ov").hidden=!h;
- if(g.ev&&g.ev.id!==lastEv){lastEv=g.ev.id;if(g.ev.k){const f=$("#fx");f.textContent=g.ev.k==="ok"?"〇":"✕";f.className=g.ev.k;f.hidden=false;setTimeout(()=>f.hidden=true,500)}}}
+ if(g.ev&&g.ev.id!==lastEv){lastEv=g.ev.id;if(g.ev.k){const f=$("#fx"),sp=$("#stamp"),ng=g.ev.k==="ng";f.textContent=g.ev.k==="ok"?"〇":"✕";f.className=g.ev.k;f.hidden=false;sp.hidden=!ng;setTimeout(()=>{f.hidden=true;sp.hidden=true},ng?1000:500)}}}
 $("#ov").onclick=()=>{const g=R.g,st=g?.stage,n={goal:g?.after,sudden:"play",end:"reveal"}[st];if(!n)return;
  const lg=local||me===g.order[0];
  if(st==="goal"&&n==="sudden"&&lg)psh("log","SUDDEN DEATH");
