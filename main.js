@@ -135,6 +135,8 @@ function chats(){const m=msgs(R.chat).slice(-30).map(x=>`<div><b>${esc(x.n)}</b>
  document.querySelectorAll(".chat").forEach(c=>{const d=c.querySelector(".msgs");d.innerHTML=m;d.scrollTop=d.scrollHeight;c.querySelector(".cin").hidden=!can;c.hidden=local})}
 document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),send=()=>{const t=i.value.trim();if(t){psh("chat",{n:name,t});i.value=""}};
  c.querySelector("button").onclick=send;i.onkeydown=e=>e.key==="Enter"&&send()});
+document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),send=()=>{const t=i.value.trim();if(t){R.phase==="lobby"?psh("chat",{n:name,t}):psh("log","💬"+name+":"+t);i.value=""}};
+ c.querySelector("button").onclick=send;i.onkeydown=e=>e.key==="Enter"&&send()});
 
 /* ---- main render ---- */
 function draw(){if(!R||!R.phase)return;const ph=R.phase;
