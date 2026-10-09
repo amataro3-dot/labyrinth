@@ -27,3 +27,5 @@ h1{font-size:20px;margin:4px 0}
 .lgrow #lg{flex:1;min-width:0}
 #al{padding:6px 8px;font-size:12px;white-space:nowrap}
 .cm{color:#8e44ad}
+#out{position:fixed;top:6px;right:6px;padding:4px 8px;font-size:12px;z-index:5}
+#title:not([hidden])~#out{display:none}
