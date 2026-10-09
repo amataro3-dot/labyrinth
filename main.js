@@ -1,7 +1,7 @@
 import*as C from"./core.js";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let me,name,rid,R={},local=0,lvl=2,lastEv=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0;
+let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0;
 const setp=(o,p,v)=>{const k=p.split("/");let x=o;k.slice(0,-1).forEach(a=>x=x[a]??={});v===null?delete x[k.at(-1)]:x[k.at(-1)]=v};
 const put=(p,v)=>{if(local){setp(R,p,v);draw()}else return set(ref(db,`rooms/${rid}/${p}`),v)};
 const psh=(p,v)=>{if(local){setp(R,p+"/"+Date.now()+Math.random().toString(36).slice(2,6),v);draw()}else return push(ref(db,`rooms/${rid}/${p}`),v)};
@@ -27,7 +27,7 @@ async function join(id){rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
 
 /* ---- housekeeping (admin交代・離脱処理) ---- */
 function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-pl[b].t),s=R.slots||{};
- if(lastEv===-1)lastEv=R.g?.ev?.id||0;
+ if(lastEv===-1){lastEv=R.g?.ev?.id||0;lastTn=R.g?.tn?.id||0}
  if(!pl[R.admin]&&ids[0]===me)put("admin",me);
  for(const k of["a","b"])if(s[k]&&!pl[s[k]]){const o=s[k==="a"?"b":"a"];
   if(R.phase==="lobby"){if(R.admin===me||(!pl[R.admin]&&ids[0]===me))put("slots/"+k,null)}
@@ -83,14 +83,15 @@ async function startGame(){const[a,b]=[R.slots.a,R.slots.b].sort(()=>Math.random
  await psh("log",P(a)+":START");await put("phase","play")}
 
 /* ---- play ---- */
+async function turn(i,last){const g=R.g;await put("g/turn",i);await psh("log",PN(g.order[i])+(last?":LAST TURN":":TURN"));await put("g/tn",{id:Date.now(),u:g.order[i],last:last?1:0})}
 async function step(p,to){if(busy)return;busy=1;
  try{const g=R.g,[a,b]=g.order,B=R.boards[p===a?b:a],from=g.pos[p],k=wk(from,to),pre=`${PN(p)}:${cl(from)} to ${cl(to)}...`;
   if((B.w||[]).includes(k)){
    await put(`g/hit/${p}`,[...(g.hit?.[p]||[]),k]);await psh("log",pre+"MISS");await put("g/ev",{id:Date.now(),k:"ng"});
-   if(g.sd){await put("g/res",a);await put("g/stage","end")}else await put("g/turn",1-g.turn)
+   if(g.sd){await put("g/res",a);await psh("log",PN(a)+":WIN");await put("g/stage","end")}else await turn(1-g.turn)
   }else{
    await put(`g/pos/${p}`,to);await put(`g/path/${p}`,[...(g.path?.[p]||[]),to]);await psh("log",pre+"OK");await put("g/ev",{id:Date.now(),k:"ok"});
-   if(to===B.G){await put("g/who",p);
+   if(to===B.G){await put("g/who",p);await psh("log",PN(p)+":GOAL");
     if(g.sd){await put("g/res","draw");await put("g/after","end")}
     else if(p===a)await put("g/after","sudden");
     else{await put("g/res",p);await put("g/after","end")}
@@ -106,11 +107,10 @@ function play(){const g=R.g,[a,b]=g.order,F=isF(me),rev=g.stage==="reveal",B=R.b
  bd($("#b1"),B[d1],{path:g.path?.[s1],pos:g.pos?.[s1],hit:g.hit?.[s1],all:rev||(!F&&spec),col:"#2874a6",
   tap:F?c=>{if(g.stage==="play"&&g.order[g.turn]===me&&nb(g.pos[me]).includes(c))step(me,c)}:0});
  bd($("#b2"),B[d2],{path:g.path?.[s2],pos:g.pos?.[s2],hit:g.hit?.[s2],all:F||rev||spec,col:"#c0392b"});
- $("#gs").textContent=g.stage==="play"?PN(g.order[g.turn])+"の番"+(g.sd?"(サドンデス)":""):rev?"壁を公開！":"";
  $("#lg").innerHTML=msgs(R.log).slice(allLog?-300:-5).map(x=>"<div>"+esc(x)+"</div>").join("");
  $("#lg").classList.toggle("all",!!allLog);
  $("#back").hidden=!(rev&&(R.admin===me||local));
- if(g.stage==="start"&&!stT&&(local||me===a))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start")put("g/stage","play")},2000)}
+ if(g.stage==="start"&&!stT&&(local||me===a))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
 $("#back").onclick=async()=>{if(local)return location.reload();await put("phase","lobby");await put("g",null);await put("boards",null)};
 /* ---- overlay / fx ---- */
@@ -123,7 +123,12 @@ function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
  $("#ov").innerHTML=h;$("#ov").hidden=!h;
  if(g.ev&&g.ev.id!==lastEv){lastEv=g.ev.id;if(g.ev.k){const f=$("#fx");f.textContent=g.ev.k==="ok"?"〇":"✕";f.className=g.ev.k;f.hidden=false;setTimeout(()=>f.hidden=true,500)}}}
 $("#ov").onclick=()=>{const g=R.g,st=g?.stage,n={goal:g?.after,sudden:"play",end:"reveal"}[st];if(!n)return;
- if(st==="sudden"){put("g/sd",1);put("g/turn",1)}put("g/stage",n)};
+ const lg=local||me===g.order[0];
+ if(st==="goal"&&n==="sudden"&&lg)psh("log","SUDDEN DEATH");
+ if(st==="goal"&&n==="end"&&lg)psh("log",g.res==="draw"?"DRAW":PN(g.res)+":WIN");
+ if(st==="end"&&lg)psh("log","REVEAL");
+ if(st==="sudden"){put("g/sd",1);turn(1,1)}put("g/stage",n)};
+function tnfx(){const g=R.g;if(g?.tn&&g.tn.id!==lastTn){lastTn=g.tn.id;const t=$("#tn");t.textContent=PN(g.tn.u)+(g.tn.last?"さんのラストターン！！":"さんのターン！！");t.hidden=false;setTimeout(()=>t.hidden=true,1100)}}
 
 /* ---- chat ---- */
 function chats(){const m=msgs(R.chat).slice(-30).map(x=>`<div><b>${esc(x.n)}</b> ${esc(x.t)}</div>`).join(""),can=R.phase==="lobby"||!isF(me);
@@ -137,4 +142,4 @@ function draw(){if(!R||!R.phase)return;const ph=R.phase;
  if(ph!=="setup")go=0;
  show(ph==="lobby"?"lobby":ph==="setup"?"setup":"game");
  if(ph==="lobby")lobby();else if(ph==="setup")setup();else if(R.g)play();
- ov();chats();if(local)cpu()}
+ ov();tnfx();chats();if(local)cpu()}
