@@ -22,3 +22,8 @@ h1{font-size:20px;margin:4px 0}
 #lg{font-size:12px;height:5.8em}
 #tn{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;background:#000a;z-index:10;pointer-events:none;text-align:center}
 #game .msgs{display:none}
+#lg{height:5.6em;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.lgrow{display:flex;gap:6px;align-items:flex-start}
+.lgrow #lg{flex:1;min-width:0}
+#al{padding:6px 8px;font-size:12px;white-space:nowrap}
+.cm{color:#8e44ad}
