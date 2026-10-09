@@ -1,7 +1,7 @@
 import*as C from"./core.js";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0;
+let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0;
 const setp=(o,p,v)=>{const k=p.split("/");let x=o;k.slice(0,-1).forEach(a=>x=x[a]??={});v===null?delete x[k.at(-1)]:x[k.at(-1)]=v};
 const put=(p,v)=>{if(local){setp(R,p,v);draw()}else return set(ref(db,`rooms/${rid}/${p}`),v)};
 const psh=(p,v)=>{if(local){setp(R,p+"/"+Date.now()+Math.random().toString(36).slice(2,6),v);draw()}else return push(ref(db,`rooms/${rid}/${p}`),v)};
@@ -9,7 +9,8 @@ const P=u=>R.players?.[u]?.name||"?",PN=u=>R.g?.names?.[u]||P(u);
 const isF=u=>!!u&&(R.slots?.a===u||R.slots?.b===u);
 const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
 const show=id=>["title","lobby","setup","game"].forEach(s=>$("#"+s).hidden=s!==id);
-const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))||(alert("なまえを入力してね"),0);
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert("なまえを入力してね"),0);
 for(let i=10;i<=15;i++)$("#wn").add(new Option(i+"枚",i));
 
 /* ---- title / join ---- */
@@ -22,19 +23,22 @@ $("#jn").onclick=async()=>{if(!nameOk())return;me??=await C.login();const id=$("
 $("#cp").onclick=()=>{if(!nameOk())return;me="me";local=1;lvl=+$("#lv").value;
  R={admin:me,phase:"setup",set:{walls:10,spec:false},players:{me:{name,t:1},cpu:{name:"コンピューター",t:2}},slots:{a:me,b:"cpu"},boards:{cpu:cpuBoard(10)}};draw()};
 async function join(id){rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
- await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;
- onValue(ref(db,"rooms/"+id),s=>{R=s.val();if(!R){alert("ルームが閉じられました");return location.reload()}watch();draw()})}
+ await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;LS.set("lab_room",id);
+ onValue(ref(db,"rooms/"+id),s=>{R=s.val();if(!R){LS.del("lab_room");alert("ルームが閉じられました");return location.reload()}watch();draw()})}
 
 /* ---- housekeeping (admin交代・離脱処理) ---- */
-function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-pl[b].t),s=R.slots||{};
+const gone={};let wt=0;
+function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-pl[b].t),s=R.slots||{},now=Date.now();let wait=0;
  if(lastEv===-1){lastEv=R.g?.ev?.id||0;lastTn=R.g?.tn?.id||0}
- if(!pl[R.admin]&&ids[0]===me)put("admin",me);
- for(const k of["a","b"])if(s[k]&&!pl[s[k]]){const o=s[k==="a"?"b":"a"];
+ if(!pl[me]){const pr=ref(db,`rooms/${rid}/players/${me}`);set(pr,{name,t:now});onDisconnect(pr).remove()}
+ const miss=u=>{if(pl[u]){delete gone[u];return 0}gone[u]??=now;if(now-gone[u]<10000){wait=1;return 0}return 1};
+ if(miss(R.admin)&&ids[0]===me)put("admin",me);
+ for(const k of["a","b"])if(s[k]&&miss(s[k])){const o=s[k==="a"?"b":"a"];
   if(R.phase==="lobby"){if(R.admin===me||(!pl[R.admin]&&ids[0]===me))put("slots/"+k,null)}
   else if(o===me&&!["end","reveal"].includes(R.g?.stage)){put("slots/"+k,null);
    if(R.phase==="setup"){put("phase","lobby");alert("相手が退出しました")}
-   else{psh("log",P(me)+":WIN(FORFEIT)");put("g/res",me);put("g/stage","end")}}}}
-
+   else{psh("log",P(me)+":WIN(FORFEIT)");put("g/res",me);put("g/stage","end")}}}
+ if(wait&&!wt)wt=setTimeout(()=>{wt=0;watch()},10200)}
 /* ---- lobby ---- */
 function lobby(){const pl=R.players||{},ids=Object.keys(pl).sort((x,y)=>pl[x].t-pl[y].t),ad=R.admin===me,s=R.slots||{},mine=isF(me),full=s.a&&s.b;
  $("#lid").textContent=rid;
@@ -107,11 +111,14 @@ function play(){const g=R.g,[a,b]=g.order,F=isF(me),rev=g.stage==="reveal",B=R.b
  bd($("#b1"),B[d1],{path:g.path?.[s1],pos:g.pos?.[s1],hit:g.hit?.[s1],all:rev||(!F&&spec),col:"#2874a6",
   tap:F?c=>{if(g.stage==="play"&&g.order[g.turn]===me&&nb(g.pos[me]).includes(c))step(me,c)}:0});
  bd($("#b2"),B[d2],{path:g.path?.[s2],pos:g.pos?.[s2],hit:g.hit?.[s2],all:F||rev||spec,col:"#c0392b"});
- $("#lg").innerHTML=msgs(R.log).slice(allLog?-300:-5).map(x=>"<div>"+esc(x)+"</div>").join("");
- $("#lg").classList.toggle("all",!!allLog);
+ const lgE=$("#lg"),keep=lgE.scrollTop,hold=lgHold||Date.now()-lgTouch<3000;
+ lgE.innerHTML=msgs(R.log).slice(-300).map(x=>`<div${x.startsWith("💬")?' class="cm"':""}>${esc(x)}</div>`).join("");
+ lgE.classList.toggle("all",!!allLog);lgE.scrollTop=hold?keep:lgE.scrollHeight;
  $("#back").hidden=!(rev&&(R.admin===me||local));
  if(g.stage==="start"&&!stT&&(local||me===a))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
+{const e=$("#lg"),rel=()=>{lgHold=0;lgTouch=Date.now();setTimeout(()=>{if(!lgHold&&Date.now()-lgTouch>=2900)e.scrollTop=e.scrollHeight},3000)};
+ e.addEventListener("touchstart",()=>lgHold=1,{passive:true});e.addEventListener("touchend",rel);e.addEventListener("touchcancel",rel);e.addEventListener("wheel",rel,{passive:true})}
 $("#back").onclick=async()=>{if(local)return location.reload();await put("phase","lobby");await put("g",null);await put("boards",null)};
 /* ---- overlay / fx ---- */
 function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
@@ -132,9 +139,7 @@ function tnfx(){const g=R.g;if(g?.tn&&g.tn.id!==lastTn){lastTn=g.tn.id;const t=$
 
 /* ---- chat ---- */
 function chats(){const m=msgs(R.chat).slice(-30).map(x=>`<div><b>${esc(x.n)}</b> ${esc(x.t)}</div>`).join(""),can=R.phase==="lobby"||!isF(me);
- document.querySelectorAll(".chat").forEach(c=>{const d=c.querySelector(".msgs");d.innerHTML=m;d.scrollTop=d.scrollHeight;c.querySelector(".cin").hidden=!can;c.hidden=local})}
-document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),send=()=>{const t=i.value.trim();if(t){psh("chat",{n:name,t});i.value=""}};
- c.querySelector("button").onclick=send;i.onkeydown=e=>e.key==="Enter"&&send()});
+ document.querySelectorAll(".chat").forEach(c=>{const d=c.querySelector(".msgs");d.innerHTML=m;d.scrollTop=d.scrollHeight;c.querySelector(".cin").hidden=!can;c.hidden=local||!can})}
 document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),send=()=>{const t=i.value.trim();if(t){R.phase==="lobby"?psh("chat",{n:name,t}):psh("log","💬"+name+":"+t);i.value=""}};
  c.querySelector("button").onclick=send;i.onkeydown=e=>e.key==="Enter"&&send()});
 
@@ -145,3 +150,8 @@ function draw(){if(!R||!R.phase)return;const ph=R.phase;
  show(ph==="lobby"?"lobby":ph==="setup"?"setup":"game");
  if(ph==="lobby")lobby();else if(ph==="setup")setup();else if(R.g)play();
  ov();tnfx();chats();if(local)cpu()}
+
+/* ---- 自動復帰 ---- */
+$("#nm").value=LS.get("lab_name")||"";
+(async()=>{const rm=LS.get("lab_room");name=LS.get("lab_name")||"";if(!rm||!name)return;
+ try{me??=await C.login();if((await get(ref(db,"rooms/"+rm))).exists())join(rm);else LS.del("lab_room")}catch(e){}})();
