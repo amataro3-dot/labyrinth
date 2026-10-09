@@ -155,3 +155,4 @@ function draw(){if(!R||!R.phase)return;const ph=R.phase;
 $("#nm").value=LS.get("lab_name")||"";
 (async()=>{const rm=LS.get("lab_room");name=LS.get("lab_name")||"";if(!rm||!name)return;
  try{me??=await C.login();if((await get(ref(db,"rooms/"+rm))).exists())join(rm);else LS.del("lab_room")}catch(e){}})();
+$("#out").onclick=async()=>{LS.del("lab_room");try{if(rid)await set(ref(db,`rooms/${rid}/players/${me}`),null)}catch(e){}location.reload()};
