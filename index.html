@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -23,17 +23,5 @@
  <p id="sinfo"></p>
  <div id="sed"><div class="row"><button id="tS">S</button><button id="tG">G</button><button id="tW">壁</button></div>
  <svg id="sb" viewBox="0 0 354 354"></svg><button id="rd">準備完了</button></div>
-</section>
-<section id="game" hidden>
- <h3 id="t1"></h3><svg id="b1" viewBox="0 0 354 354"></svg>
-  <div class="lgrow"><div id="lg"></div><button id="al">全ログ</button></div>
- <button id="back" hidden>ロビーに戻る</button>
- <h3 id="t2"></h3><svg id="b2" viewBox="0 0 354 354"></svg>
- <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
-</section>
- <button id="out">ルームを出る</button>
- <img id="stamp" src="stamp.png" hidden alt="">
-<div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
-<script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=7"></script>
-</body></html>
+ <div id="wt" hidden>
+  <div id="stat"></div>
