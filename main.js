@@ -11,7 +11,7 @@ const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
 const show=id=>["title","lobby","setup","game"].forEach(s=>$("#"+s).hidden=s!==id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert("なまえを入力してね"),0);
-for(let i=10;i<=15;i++)$("#wn").add(new Option(i+"枚",i));
+for(let i=10;i<=20;i++)$("#wn").add(new Option(i+"枚",i));
 
 /* ---- title / join ---- */
 $("#mk").onclick=async()=>{if(!nameOk())return;me??=await C.login();let id;
