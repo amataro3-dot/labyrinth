@@ -40,3 +40,7 @@ h1{font-size:20px;margin:4px 0}
 #rk td{padding:3px 6px;border-bottom:1px solid #ddd}
 #md button{flex:1;min-width:0;font-size:12px}
 #md button:disabled{opacity:.5}
+#brk{width:100%;border-collapse:collapse;font-size:14px}
+#brk td{padding:3px 6px;border-bottom:1px solid #ddd}
+#bwho{margin-top:6px;font-weight:700}
+#bmsg{font-weight:700}
