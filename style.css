@@ -36,3 +36,7 @@ h1{font-size:20px;margin:4px 0}
 #vb{max-width:260px;margin:0 auto}#vc{margin:0;font-size:14px}
 #bo{display:flex;flex-direction:row;gap:6px}#bo button{flex:1;min-width:0;padding:8px 4px}
 .bs{font-size:12px;margin:2px 0;color:#555}
+#rk{width:100%;border-collapse:collapse;font-size:14px}
+#rk td{padding:3px 6px;border-bottom:1px solid #ddd}
+#md button{flex:1;min-width:0;font-size:12px}
+#md button:disabled{opacity:.5}
