@@ -1,7 +1,7 @@
-import*as C from"./core.js";
-const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
+import*as C from"./core.js?v=10";
+const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0;
+let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0;
 const setp=(o,p,v)=>{const k=p.split("/");let x=o;k.slice(0,-1).forEach(a=>x=x[a]??={});v===null?delete x[k.at(-1)]:x[k.at(-1)]=v};
 const put=(p,v)=>{if(local){setp(R,p,v);draw()}else return set(ref(db,`rooms/${rid}/${p}`),v)};
 const psh=(p,v)=>{if(local){setp(R,p+"/"+Date.now()+Math.random().toString(36).slice(2,6),v);draw()}else return push(ref(db,`rooms/${rid}/${p}`),v)};
@@ -12,6 +12,10 @@ const show=id=>["title","lobby","setup","game"].forEach(s=>$("#"+s).hidden=s!==i
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert("なまえを入力してね"),0);
 for(let i=10;i<=20;i++)$("#wn").add(new Option(i+"枚",i));
+for(let i=10;i<=20;i++)$("#cw").add(new Option("壁"+i+"枚",i));
+
+const ck=s=>String(s).replace(/[.$#\[\]\/]/g,"_");
+const cn=nm=>R.coins?.[ck(nm)]?.n??0;
 
 /* ---- title / join ---- */
 $("#mk").onclick=async()=>{if(!nameOk())return;me??=await C.login();let id;
@@ -20,10 +24,15 @@ $("#mk").onclick=async()=>{if(!nameOk())return;me??=await C.login();let id;
 $("#jn").onclick=async()=>{if(!nameOk())return;me??=await C.login();const id=$("#rid").value.trim(),s=await get(ref(db,"rooms/"+id));
  if(!s.exists())return alert("ルームが見つかりません");
  if(Object.keys(s.val().players||{}).length>=8)return alert("満員です(最大8人)");join(id)};
-$("#cp").onclick=()=>{if(!nameOk())return;me="me";local=1;lvl=+$("#lv").value;
- R={admin:me,phase:"setup",set:{walls:10,spec:false},players:{me:{name,t:1},cpu:{name:"コンピューター",t:2}},slots:{a:me,b:"cpu"},boards:{cpu:cpuBoard(10)}};draw()};
-async function join(id){rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
+$("#cp").onclick=()=>{if(!nameOk())return;me="me";local=1;lvl=+$("#lv").value;const cw=+$("#cw").value;
+ R={admin:me,phase:"setup",set:{walls:cw,spec:false,coin:false},players:{me:{name,t:1},cpu:{name:"コンピューター",t:2}},slots:{a:me,b:"cpu"},boards:{cpu:cpuBoard(cw)}};draw()};
+async function join(id){const cs=(await get(ref(db,`rooms/${id}/set/coin`))).val();
+ if(cs){const ps=(await get(ref(db,`rooms/${id}/players`))).val()||{};if(Object.entries(ps).some(([u,p])=>u!==me&&ck(p.name)===ck(name)))return alert("その名前は使われています。べつの名前にしてね")}
+ rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
  await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;LS.set("lab_room",id);
+ if(cs){await new Promise(r=>{onValue(ref(db,".info/serverTimeOffset"),s=>{so=s.val()||0;r()},{onlyOnce:true});setTimeout(r,2000)});
+  const cr=ref(db,`rooms/${id}/coins/${ck(name)}`),c=(await get(cr)).val();
+  if(!c||c.n===undefined||(c.off&&Date.now()+so-c.off>300000))await set(cr,{n:5});else if(c.off)await set(ref(db,`rooms/${id}/coins/${ck(name)}/off`),null)}
  onValue(ref(db,"rooms/"+id),s=>{R=s.val();if(!R){LS.del("lab_room");alert("ルームが閉じられました");return location.reload()}watch();draw()})}
 
 /* ---- housekeeping (admin交代・離脱処理) ---- */
@@ -43,16 +52,20 @@ function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-
 /* ---- lobby ---- */
 function lobby(){const pl=R.players||{},ids=Object.keys(pl).sort((x,y)=>pl[x].t-pl[y].t),ad=R.admin===me,s=R.slots||{},mine=isF(me),full=s.a&&s.b;
  $("#lid").textContent=rid;
- $("#plist").innerHTML=ids.map(u=>`<li>${esc(pl[u].name)}${u===R.admin?" 👑":""}${u===me?"(自分)":""} <b>${isF(u)?"対戦":"観覧"}</b></li>`).join("");
+ $("#plist").innerHTML=ids.map(u=>`<li>${esc(pl[u].name)}${u===R.admin?" 👑":""}${u===me?"(自分)":""}${R.set.coin?" 🪙"+cn(pl[u].name):""} <b>${isF(u)?"対戦":"観戦"}</b></li>`).join("");
  $("#pst").textContent=full?`${P(s.a)} vs ${P(s.b)}`:(s.a||s.b)?"対戦者を待ってます…":"対戦者はまだいません";
  $("#bp").hidden=mine||!!full;$("#bx").hidden=!mine;
  $("#adm").hidden=!ad;$("#st").disabled=!full;
- if($("#wn").value!=R.set.walls)$("#wn").value=R.set.walls;$("#sp").checked=!!R.set.spec;
- $("#aset").textContent=ad?"":`壁${R.set.walls}枚 / 観覧者の壁表示：${R.set.spec?"あり":"なし"}`}
+ if($("#wn").value!=R.set.walls)$("#wn").value=R.set.walls;$("#sp").checked=!!R.set.spec;$("#cb").checked=!!R.set.coin;
+ $("#aset").textContent=ad?"":`壁${R.set.walls}枚 / 観戦者の壁表示：${R.set.spec?"あり":"なし"} / コインバトル：${R.set.coin?"オン":"オフ"}`}
 $("#bp").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me||s.b===me)return s;if(!s.a)s.a=me;else if(!s.b)s.b=me;else return;return s});
 $("#bx").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me)delete s.a;if(s.b===me)delete s.b;return s});
 $("#wn").onchange=e=>put("set/walls",+e.target.value);
 $("#sp").onchange=e=>put("set/spec",e.target.checked);
+$("#cb").onchange=async e=>{const on=e.target.checked,pl=R.players||{};
+ if(on){const ks=Object.values(pl).map(p=>ck(p.name));if(new Set(ks).size<ks.length){alert("同じ名前の人がいるので、コインバトルは始められません");e.target.checked=false;return}
+  for(const u in pl)await put("coins/"+ck(pl[u].name),{n:5});await put("set/coin",true)}
+ else{if(!confirm("コインが消えますが本当にやめますか？")){e.target.checked=true;return}await put("coins",null);await put("set/coin",false)}};
 $("#st").onclick=async()=>{await put("boards",null);await put("g",null);await put("log",null);await put("bets",null);await put("prog",null);await put("phase","setup")};
 
 /* ---- board drawing ---- */
@@ -73,7 +86,14 @@ function bd(el,B,o){B=B||{w:[]};const Z=54,O=30,hit=o.hit||[],pa=new Set(o.path|
 
 /* ---- setup ---- */
 const pushProg=()=>{if(local||!isF(me))return;const o={S:E.S,G:E.G,n:E.W.length};if(R.set?.spec)o.w=[...E.W];put("prog/"+me,o)};
-const hitLog=res=>psh("log","🎯HIT: "+(Object.values(R.bets||{}).filter(b=>b.c===res).map(b=>b.n).join(", ")||"none"));
+async function settle(){const g=R.g,[a,b]=g.order,res=g.res,bt=Object.values(R.bets||{}),d={},nm={};
+ const add=(n,v)=>{const k=ck(n);d[k]=(d[k]||0)+v;nm[k]=n};
+ if(res!=="draw"){add(g.names[res],2);add(g.names[res===a?b:a],-2)}
+ bt.forEach(x=>add(x.n,x.c===res?1:-1));
+ await psh("log","🎯HIT: "+(bt.filter(x=>x.c===res).map(x=>x.n).join(", ")||"none"));
+ const o=[];
+ for(const k in d){const old=cn(nm[k]),nw=Math.max(0,old+d[k]);if(nw!==old){await put("coins/"+k+"/n",nw);o.push(nm[k]+" "+(nw>old?"+":"")+(nw-old))}}
+ if(o.length)await psh("log","🪙 "+o.join(", "))}
 function setup(){const F=isF(me),done=R.boards?.[me]?.ok,cnt=R.set.walls,W=F&&!done;
  $("#sed").hidden=!W;
  $("#sinfo").textContent=W?`S・G・壁${cnt}枚を決めてね(壁 ${E.W.length}/${cnt})`:F?"相手の準備を待っています…":"対戦者が盤面を作っています…";
@@ -84,7 +104,7 @@ function setup(){const F=isF(me),done=R.boards?.[me]?.ok,cnt=R.set.walls,W=F&&!d
  $("#wt").hidden=W||local;if(!W&&!local)wait(F);
  const s=R.slots||{};
  if(!go&&(R.admin===me||local)&&s.a&&s.b&&R.boards?.[s.a]?.ok&&R.boards?.[s.b]?.ok){go=1;startGame()}}
-function wait(F){const s=R.slots||{},u=[s.a,s.b],spec=R.set.spec,cnt=R.set.walls,bets=R.bets||{},my=bets[me]?.c;
+function wait(F){const s=R.slots||{},u=[s.a,s.b],spec=R.set.spec,cnt=R.set.walls,coin=!!R.set.coin,bets=R.bets||{},my=bets[me]?.c;
  $("#stat").innerHTML=u.map(x=>`<div>${R.boards?.[x]?.ok?"✓ "+esc(P(x))+"さん準備完了":esc(P(x))+"さん作成中"}</div>`).join("");
  $("#vw").hidden=F;
  if(!F){betView=Math.min(betView,1);const x=u[betView],B=R.boards?.[x]?.ok?R.boards[x]:(R.prog?.[x]||{}),n=B.ok?(B.w||[]).length:(B.n||0);
@@ -92,10 +112,14 @@ function wait(F){const s=R.slots||{},u=[s.a,s.b],spec=R.set.spec,cnt=R.set.walls
   $("#v0").classList.toggle("on",betView===0);$("#v1").classList.toggle("on",betView===1);
   bd($("#vb"),{S:B.S,G:B.G,w:spec?(B.w||[]):[]},{all:1});
   $("#vc").textContent=`${P(x)}さんの壁 ${n}/${cnt}`+(spec?"":"(壁の位置はひみつ)")}
- const cn=k=>Object.values(bets).filter(b=>b.c===k).length;
- $("#bo").innerHTML=[[s.a,P(s.a)+"さん"],[s.b,P(s.b)+"さん"],["draw","引き分け"]].map(([k,t])=>`<button data-c="${esc(k)}" class="${my===k?"on":""}">${esc(t)}<br>${cn(k)}票</button>`).join("")}
+ const canBet=coin&&!F;
+ $("#bet").hidden=!canBet;$("#rkw").hidden=!coin;
+ if(canBet){const mc=cn(name),k=x=>Object.values(bets).filter(b=>b.c===x).length;
+  $("#mc").textContent=`🪙 あなたのコイン:${mc}枚`+(mc<1?"(0枚なので賭けられません)":"(1枚賭けます)");
+  $("#bo").innerHTML=[[s.a,P(s.a)+"さん"],[s.b,P(s.b)+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
+ if(coin)$("#rk").innerHTML=Object.values(R.players||{}).map(p=>[p.name,cn(p.name)]).sort((x,y)=>y[1]-x[1]||x[0].localeCompare(y[0])).map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x[0])}</td><td>🪙${x[1]}</td></tr>`).join("")}
 $("#v0").onclick=()=>{betView=0;draw()};$("#v1").onclick=()=>{betView=1;draw()};
-$("#bo").onclick=e=>{const b=e.target.closest("button");if(b&&R.phase==="setup"&&!local)put("bets/"+me,{c:b.dataset.c,n:name})};
+$("#bo").onclick=e=>{const b=e.target.closest("button");if(b&&R.phase==="setup"&&R.set.coin&&!local&&!isF(me)&&cn(name)>=1)put("bets/"+me,{c:b.dataset.c,n:name})};
 ["S","G","W"].forEach(t=>$("#t"+t).onclick=()=>{tool=t;draw()});
 $("#rd").onclick=()=>{if(!E.S||!E.G||E.S===E.G||E.W.length!==R.set.walls||!reach(new Set(E.W),E.S,E.G))
  return alert("S・G・壁の数を確認してね。SからGへ必ず行ける道が必要です");put(`boards/${me}`,{S:E.S,G:E.G,w:E.W,ok:1})};
@@ -132,9 +156,10 @@ function play(){const g=R.g,[a,b]=g.order,F=isF(me),rev=g.stage==="reveal",B=R.b
  lgE.innerHTML=msgs(R.log).slice(-300).map(x=>`<div${x.startsWith("💬")?' class="cm"':""}>${esc(x)}</div>`).join("");
  lgE.classList.toggle("all",!!allLog);lgE.scrollTop=hold?keep:lgE.scrollHeight;
  $("#back").hidden=!(rev&&(R.admin===me||local));
- {const bt=R.bets||{},c=k=>Object.values(bt).filter(x=>x.c===k).length,my=bt[me],e=$("#bs");e.hidden=local;
-  if(!local)e.textContent=`🎲 ${PN(a)} ${c(a)}票 / ${PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票 ・あなた:`+(my?(my.c==="draw"?"引き分け":PN(my.c)):"なし")}
- if(!local&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===(g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);hitLog(g.res)}
+ {const e=$("#bs");e.hidden=local||!R.set.coin;
+  if(!e.hidden){const bt=R.bets||{},c=k=>Object.values(bt).filter(x=>x.c===k).length,my=bt[me];
+   e.textContent=`🎲 ${PN(a)} ${c(a)}票 / ${PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票`+(F?"":` ・あなた:`+(my?(my.c==="draw"?"引き分け":PN(my.c)):"なし"))+` ・🪙${cn(name)}`}}
+ if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===(g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);settle()}
  if(g.stage==="start"&&!stT&&(local||me===a))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
 {const e=$("#lg"),rel=()=>{lgHold=0;lgTouch=Date.now();setTimeout(()=>{if(!lgHold&&Date.now()-lgTouch>=2900)e.scrollTop=e.scrollHeight},3000)};
@@ -166,6 +191,8 @@ document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),
 
 /* ---- main render ---- */
 function draw(){if(!R||!R.phase)return;const ph=R.phase;
+ if(!local&&name){const cr=onDisconnect(ref(db,`rooms/${rid}/coins/${ck(name)}/off`));
+  if(R.set?.coin&&!cdReg){cdReg=1;cr.set(serverTimestamp())}else if(!R.set?.coin&&cdReg){cdReg=0;cr.cancel()}}
  if(ph!==lastPh){lastPh=ph;if(ph==="setup"){E={S:"",G:"",W:[]};tool="S";pushProg()}}
  if(ph!=="setup")go=0;
  show(ph==="lobby"?"lobby":ph==="setup"?"setup":"game");
