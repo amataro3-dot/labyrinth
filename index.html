@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=10"></head><body>
+<link rel="stylesheet" href="style.css?v=11"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -16,6 +16,7 @@
  <div id="adm" hidden>壁の枚数 <select id="wn"></select>
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
+  <label><input type="checkbox" id="bw"> ボーナスウォール</label>
   <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2" disabled>ダブルス(準備中)</button><button id="m3" disabled>マルチ(準備中)</button></div>
   <button id="st">ゲームスタート</button></div>
  <p id="aset"></p>
@@ -32,8 +33,19 @@
    <svg id="vb" viewBox="0 0 354 354"></svg>
    <p id="vc"></p>
   </div>
-  <div id="bet" hidden><h3>どちらに賭けますか?</h3><p id="mc" class="bs"></p><div id="bo"></div><p class="bs">ゲームが始まるまで変えられます(誰に賭けたかは見えません)</p></div>
+  <div id="bet" hidden><h3>どちらに賭けますか?</h3><p id="mc" class="bs"></p><div id="bo"></div><p class="bs" id="bhint"></p></div>
   <div id="rkw" hidden><h3>🪙 コインランキング</h3><table id="rk"></table></div>
+ </div>
+</section>
+<section id="bonus" hidden>
+ <div id="bsel" hidden>
+  <p id="bmsg"></p>
+  <h3 id="bt1"></h3><svg id="bb1" viewBox="0 0 354 354"></svg>
+  <h3 id="bt2"></h3><svg id="bb2" viewBox="0 0 354 354"></svg>
+ </div>
+ <div id="bwait" hidden>
+  <p id="bw1"></p>
+  <div id="bpl" hidden><h3>🪙 コインランキング</h3><table id="brk"></table><div id="bwho"></div></div>
  </div>
 </section>
 <section id="game" hidden>
@@ -48,5 +60,5 @@
 <img id="stamp" src="stamp.png" hidden alt="">
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=10"></script>
+<script type="module" src="main.js?v=11"></script>
 </body></html>
