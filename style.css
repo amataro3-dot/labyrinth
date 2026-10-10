@@ -30,3 +30,9 @@ h1{font-size:20px;margin:4px 0}
 #out{position:fixed;top:6px;right:6px;padding:4px 8px;font-size:12px;z-index:5}
 #title:not([hidden])~#out{display:none}
 #stamp{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(75vw,360px);z-index:12;pointer-events:none}
+#wt>div{display:flex;flex-direction:column;gap:6px}
+#stat div{padding:4px;font-weight:700}
+.tabs{display:flex;flex-direction:row;gap:6px}.tabs button{flex:1;min-width:0;background:#999}.tabs button.on{background:#1e8449}
+#vb{max-width:260px;margin:0 auto}#vc{margin:0;font-size:14px}
+#bo{display:flex;flex-direction:row;gap:6px}#bo button{flex:1;min-width:0;padding:8px 4px}
+.bs{font-size:12px;margin:2px 0;color:#555}
