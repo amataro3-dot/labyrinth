@@ -44,3 +44,7 @@ h1{font-size:20px;margin:4px 0}
 #brk td{padding:3px 6px;border-bottom:1px solid #ddd}
 #bwho{margin-top:6px;font-weight:700}
 #bmsg{font-weight:700}
+#dbl .row{align-items:center;gap:8px}
+#dbl button{min-width:56px}
+#dbl span{flex:1;text-align:left;font-weight:700}
+#dbl button.on,#md button.on{background:#1e8449}
