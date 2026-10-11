@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=11"></head><body>
+<link rel="stylesheet" href="style.css?v=12"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -12,20 +12,30 @@
 <section id="lobby" hidden>
  <p>ルームID：<b id="lid"></b></p>
  <ul id="plist"></ul><p id="pst"></p>
- <div class="row"><button id="bp">対戦する</button><button id="bx" hidden>対戦をやめる</button></div>
+ <div class="row" id="sr"><button id="bp">対戦する</button><button id="bx" hidden>対戦をやめる</button></div>
+ <div id="dbl" hidden>
+  <div class="row"><button id="d_a">A1</button><span id="n_a"></span></div>
+  <div class="row"><button id="d_a2">A2</button><span id="n_a2"></span></div>
+  <div class="row"><button id="d_b">B1</button><span id="n_b"></span></div>
+  <div class="row"><button id="d_b2">B2</button><span id="n_b2"></span></div>
+ </div>
  <div id="adm" hidden>壁の枚数 <select id="wn"></select>
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
   <label><input type="checkbox" id="bw"> ボーナスウォール</label>
-  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2" disabled>ダブルス(準備中)</button><button id="m3" disabled>マルチ(準備中)</button></div>
+  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2">ダブルス</button><button id="m3" disabled>マルチ(準備中)</button></div>
   <button id="st">ゲームスタート</button></div>
- <p id="aset"></p>
+  <p id="aset"></p>
  <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
 </section>
 <section id="setup" hidden>
  <p id="sinfo"></p>
  <div id="sed"><div class="row"><button id="tS">S</button><button id="tG">G</button><button id="tW">壁</button></div>
  <svg id="sb" viewBox="0 0 354 354"></svg><button id="rd">準備完了</button></div>
+ <div id="ded" hidden>
+  <svg id="db" viewBox="0 0 354 354"></svg>
+  <div class="row"><button id="dok">決定</button><button id="drd" hidden>準備完了</button></div>
+ </div>
  <div id="wt" hidden>
   <div id="stat"></div>
   <div id="vw" hidden>
@@ -60,5 +70,5 @@
 <img id="stamp" src="stamp.png" hidden alt="">
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=11"></script>
+<script type="module" src="main.js?v=12"></script>
 </body></html>
