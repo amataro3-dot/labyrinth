@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=12"></head><body>
+<link rel="stylesheet" href="style.css?v=13"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -13,6 +13,10 @@
  <p>ルームID：<b id="lid"></b></p>
  <ul id="plist"></ul><p id="pst"></p>
  <div class="row" id="sr"><button id="bp">対戦する</button><button id="bx" hidden>対戦をやめる</button></div>
+ <div id="mul" hidden>
+  <div class="row"><button id="mq">出題者になる</button><button id="mj">参加する</button><button id="mx" hidden>やめる</button></div>
+  <p id="mls"></p>
+ </div>
  <div id="dbl" hidden>
   <div class="row"><button id="d_a">A1</button><span id="n_a"></span></div>
   <div class="row"><button id="d_a2">A2</button><span id="n_a2"></span></div>
@@ -23,9 +27,10 @@
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
   <label><input type="checkbox" id="bw"> ボーナスウォール</label>
-  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2">ダブルス</button><button id="m3" disabled>マルチ(準備中)</button></div>
+  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2">ダブルス</button><button id="m3">マルチ</button></div>
+  <span id="tw" hidden>周の上限 <select id="tl"></select></span>
   <button id="st">ゲームスタート</button></div>
-  <p id="aset"></p>
+ <p id="aset"></p>
  <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
 </section>
 <section id="setup" hidden>
@@ -60,6 +65,7 @@
 </section>
 <section id="game" hidden>
  <h3 id="t1"></h3><svg id="b1" viewBox="0 0 354 354"></svg>
+ <p id="mst" hidden></p>
  <div class="lgrow"><div id="lg"></div><button id="al">全ログ</button></div>
  <p id="bs" class="bs" hidden></p>
  <button id="back" hidden>ロビーに戻る</button>
@@ -70,5 +76,5 @@
 <img id="stamp" src="stamp.png" hidden alt="">
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=12"></script>
+<script type="module" src="main.js?v=13"></script>
 </body></html>
