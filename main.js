@@ -14,6 +14,7 @@ const gids=()=>DBL()?["tA","tB"]:[R.slots?.a,R.slots?.b];
 const gname=id=>DBL()?mem(id).map(P).join("&"):P(id);
 const slab=u=>{const k=Object.keys(R.slots||{}).find(x=>R.slots[x]===u);return k?(DBL()?SL[k]:"対戦"):"観戦"};
 const wr=(g,id)=>g.mem?.[id]?.[0]||id;
+const blab=id=>{const pl=R.phase==="play"&&R.g,mm=DBL()&&((pl&&pl.mem?.[id])||mem(id));return mm?`${id==="tA"?"A":"B"}(${mm.map(u=>((pl&&pl.names?.[u])||P(u))+"さん").join("、")})`:""};
 const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
 const show=id=>["title","lobby","setup","bonus","game"].forEach(s=>$("#"+s).hidden=s!==id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
@@ -156,7 +157,7 @@ function wait(F){const u=gids(),spec=R.set.spec,cnt=R.set.walls,coin=!!R.set.coi
  $("#bet").hidden=!canBet;$("#rkw").hidden=!coin;
  if(canBet){const mc=cn(name),k=x=>Object.values(bets).filter(b=>b.c===x).length;
   $("#mc").textContent=`🪙 あなたのコイン:${mc}枚`+(mc<1?"(0枚なので賭けられません)":"(1枚賭けます)");
-  $("#bo").innerHTML=[[u[0],gname(u[0])+"さん"],[u[1],gname(u[1])+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
+  $("#bo").innerHTML=[[u[0],blab(u[0])||gname(u[0])+"さん"],[u[1],blab(u[1])||gname(u[1])+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
  if(coin)$("#rk").innerHTML=rankHtml();
  $("#bhint").textContent=R.set.bonus?"全員の壁ができるまで変えられます(誰に賭けたかは見えません)":"ゲームが始まるまで変えられます(誰に賭けたかは見えません)"}
 $("#v0").onclick=()=>{betView=0;draw()};$("#v1").onclick=()=>{betView=1;draw()};
@@ -225,7 +226,7 @@ function play(){const g=R.g,[a,b]=g.order,mt=Object.keys(g.mem||{}).find(t=>g.me
  $("#back").hidden=!(rev&&(R.admin===me||local));
  {const e=$("#bs");e.hidden=local||!R.set.coin;
   if(!e.hidden){const bt=R.bets||{},c=k=>Object.values(bt).filter(x=>x.c===k).length,my=bt[me];
-   e.textContent=`🎲 ${PN(a)} ${c(a)}票 / ${PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票`+(F?"":` ・あなた:`+(my?(my.c==="draw"?"引き分け":PN(my.c)):"なし"))+` ・🪙${cn(name)}`}}
+   e.textContent=`🎲 ${blab(a)||PN(a)} ${c(a)}票 / ${blab(b)||PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票`+(F?"":` ・あなた:`+(my?(my.c==="draw"?"引き分け":(blab(my.c)||PN(my.c))):"なし"))+` ・🪙${cn(name)}`}}
  if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===wr(g,g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);settle()}
  if(g.stage==="start"&&!stT&&(local||me===wr(g,a)))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
