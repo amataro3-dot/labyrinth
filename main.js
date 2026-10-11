@@ -1,12 +1,19 @@
 import*as C from"./core.js?v=10";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0;
+let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
 const setp=(o,p,v)=>{const k=p.split("/");let x=o;k.slice(0,-1).forEach(a=>x=x[a]??={});v===null?delete x[k.at(-1)]:x[k.at(-1)]=v};
 const put=(p,v)=>{if(local){setp(R,p,v);draw()}else return set(ref(db,`rooms/${rid}/${p}`),v)};
 const psh=(p,v)=>{if(local){setp(R,p+"/"+Date.now()+Math.random().toString(36).slice(2,6),v);draw()}else return push(ref(db,`rooms/${rid}/${p}`),v)};
 const P=u=>R.players?.[u]?.name||"?",PN=u=>R.g?.names?.[u]||P(u);
-const isF=u=>!!u&&(R.slots?.a===u||R.slots?.b===u);
+const DBL=()=>R.set?.mode==="double",SK=()=>DBL()?["a","a2","b","b2"]:["a","b"],TM={tA:["a","a2"],tB:["b","b2"]},SL={a:"A1",a2:"A2",b:"B1",b2:"B2"};
+const isF=u=>!!u&&SK().some(k=>R.slots?.[k]===u);
+const mem=t=>TM[t].map(k=>R.slots?.[k]).filter(Boolean);
+const tOf=u=>DBL()?(TM.tA.some(k=>R.slots?.[k]===u)?"tA":TM.tB.some(k=>R.slots?.[k]===u)?"tB":null):(isF(u)?u:null);
+const gids=()=>DBL()?["tA","tB"]:[R.slots?.a,R.slots?.b];
+const gname=id=>DBL()?mem(id).map(P).join("&"):P(id);
+const slab=u=>{const k=Object.keys(R.slots||{}).find(x=>R.slots[x]===u);return k?(DBL()?SL[k]:"対戦"):"観戦"};
+const wr=(g,id)=>g.mem?.[id]?.[0]||id;
 const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
 const show=id=>["title","lobby","setup","bonus","game"].forEach(s=>$("#"+s).hidden=s!==id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
@@ -42,24 +49,29 @@ function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-
  if(!pl[me]){const pr=ref(db,`rooms/${rid}/players/${me}`);set(pr,{name,t:now});onDisconnect(pr).remove()}
  const miss=u=>{if(pl[u]){delete gone[u];return 0}gone[u]??=now;if(now-gone[u]<10000){wait=1;return 0}return 1};
  if(miss(R.admin)&&ids[0]===me)put("admin",me);
- for(const k of["a","b"])if(s[k]&&miss(s[k])){const o=s[k==="a"?"b":"a"];
+ for(const k of SK())if(s[k]&&miss(s[k])){const ok2=DBL()?(TM.tA.includes(k)?TM.tB:TM.tA):[k==="a"?"b":"a"],o=ok2.map(x=>s[x]).find(u=>u&&pl[u]);
   if(R.phase==="lobby"){if(R.admin===me||(!pl[R.admin]&&ids[0]===me))put("slots/"+k,null)}
   else if(o===me&&!["end","reveal"].includes(R.g?.stage)){put("slots/"+k,null);
    if(R.phase==="setup"||R.phase==="bonus"){put("phase","lobby");alert("相手が退出しました")}
-   else{psh("log",P(me)+":WIN(FORFEIT)");put("g/res",me);put("g/stage","end")}}}
+   else{const mt=tOf(me);psh("log",PN(mt)+":WIN(FORFEIT)");put("g/res",mt);put("g/stage","end")}}}
  if(wait&&!wt)wt=setTimeout(()=>{wt=0;watch()},10200)}
 
 /* ---- lobby ---- */
-function lobby(){const pl=R.players||{},ids=Object.keys(pl).sort((x,y)=>pl[x].t-pl[y].t),ad=R.admin===me,s=R.slots||{},mine=isF(me),full=s.a&&s.b;
+function lobby(){const pl=R.players||{},ids=Object.keys(pl).sort((x,y)=>pl[x].t-pl[y].t),ad=R.admin===me,s=R.slots||{},mine=isF(me),dbl=DBL(),full=SK().every(k=>s[k]);
  $("#lid").textContent=rid;
- $("#plist").innerHTML=ids.map(u=>`<li>${esc(pl[u].name)}${u===R.admin?" 👑":""}${u===me?"(自分)":""}${R.set.coin?" 🪙"+cn(pl[u].name):""} <b>${isF(u)?"対戦":"観戦"}</b></li>`).join("");
- $("#pst").textContent=full?`${P(s.a)} vs ${P(s.b)}`:(s.a||s.b)?"対戦者を待ってます…":"対戦者はまだいません";
+ $("#plist").innerHTML=ids.map(u=>`<li>${esc(pl[u].name)}${u===R.admin?" 👑":""}${u===me?"(自分)":""}${R.set.coin?" 🪙"+cn(pl[u].name):""} <b>${slab(u)}</b></li>`).join("");
+ $("#pst").textContent=dbl?(full?`${gname("tA")} vs ${gname("tB")}`:"A1・A2・B1・B2の4人がそろうとスタートできます"):full?`${P(s.a)} vs ${P(s.b)}`:(s.a||s.b)?"対戦者を待ってます…":"対戦者はまだいません";
  $("#bp").hidden=mine||!!full;$("#bx").hidden=!mine;
+ $("#sr").hidden=dbl;$("#dbl").hidden=!dbl;$("#m1").classList.toggle("on",!dbl);$("#m2").classList.toggle("on",dbl);
+ if(dbl)["a","a2","b","b2"].forEach(k=>{$("#n_"+k).textContent=s[k]?P(s[k]):"";$("#d_"+k).classList.toggle("on",s[k]===me)});
  $("#adm").hidden=!ad;$("#st").disabled=!full;
  if($("#wn").value!=R.set.walls)$("#wn").value=R.set.walls;$("#sp").checked=!!R.set.spec;$("#cb").checked=!!R.set.coin;$("#sp").disabled=!!R.set.coin;$("#bw").disabled=!R.set.coin;$("#bw").checked=!!R.set.bonus;
- $("#aset").textContent=ad?"":`壁${R.set.walls}枚 / 観戦者の壁表示：${R.set.spec?"あり":"なし"} / コインバトル：${R.set.coin?"オン":"オフ"}${R.set.coin?` / ボーナスウォール：${R.set.bonus?"オン":"オフ"}`:""}`}
+ $("#aset").textContent=ad?"":`${dbl?"ダブルス":"シングル"} / 壁${R.set.walls}枚 / 観戦者の壁表示：${R.set.spec?"あり":"なし"} / コインバトル：${R.set.coin?"オン":"オフ"}${R.set.coin?` / ボーナスウォール：${R.set.bonus?"オン":"オフ"}`:""}`}
 $("#bp").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me||s.b===me)return s;if(!s.a)s.a=me;else if(!s.b)s.b=me;else return;return s});
 $("#bx").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me)delete s.a;if(s.b===me)delete s.b;return s});
+["a","a2","b","b2"].forEach(k=>$("#d_"+k).onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s[k]&&s[k]!==me)return;const had=s[k]===me;for(const x in s)if(s[x]===me)delete s[x];if(!had)s[k]=me;return s}));
+const setMode=async x=>{if((R.set.mode||"single")===x)return;await put("slots",null);await put("set/mode",x)};
+$("#m1").onclick=()=>setMode("single");$("#m2").onclick=()=>setMode("double");
 $("#wn").onchange=e=>put("set/walls",+e.target.value);
 $("#sp").onchange=e=>put("set/spec",e.target.checked);
 $("#cb").onchange=async e=>{const on=e.target.checked,pl=R.players||{};
@@ -67,7 +79,9 @@ $("#cb").onchange=async e=>{const on=e.target.checked,pl=R.players||{};
   for(const u in pl)await put("coins/"+ck(pl[u].name),{n:5});await put("set/spec",true);await put("set/coin",true)}
  else{if(!confirm("コインが消えますが本当にやめますか？")){e.target.checked=true;return}await put("coins",null);await put("set/bonus",false);await put("set/coin",false)}};
 $("#bw").onchange=e=>put("set/bonus",e.target.checked);
-$("#st").onclick=async()=>{await put("boards",null);await put("g",null);await put("log",null);await put("bets",null);await put("prog",null);await put("bonus",null);await put("bq",null);await put("bt",null);await put("bgo",null);await put("phase","setup")};
+$("#st").onclick=async()=>{await put("boards",null);await put("g",null);await put("log",null);await put("bets",null);await put("prog",null);await put("bonus",null);await put("bq",null);await put("bt",null);await put("bgo",null);await put("tb",null);
+ if(DBL()){const tb={};for(const t of["tA","tB"]){const mm=mem(t),sh=[...mm].sort(()=>Math.random()-.5);tb[t]={m:mm,s:sh[0],g:sh[1],f:mm[Math.random()<.5?0:1]}}await put("tb",tb)}
+ await put("phase","setup")};
 
 /* ---- board drawing ---- */
 function bd(el,B,o){B=B||{w:[]};const Z=54,O=30,hit=o.hit||[],pa=new Set(o.path||[]);let h="";
@@ -86,38 +100,63 @@ function bd(el,B,o){B=B||{w:[]};const Z=54,O=30,hit=o.hit||[],pa=new Set(o.path|
  el.onclick=e=>{const d=e.target.dataset;if(d.k&&o.edge)o.edge(d.k);else if(d.c&&o.tap)o.tap(d.c)}}
 
 /* ---- setup ---- */
-const pushProg=()=>{if(local||!isF(me))return;const o={S:E.S,G:E.G,n:E.W.length};if(R.set?.spec)o.w=[...E.W];put("prog/"+me,o)};
+const pushProg=()=>{if(local||DBL()||!isF(me))return;const o={S:E.S,G:E.G,n:E.W.length};if(R.set?.spec)o.w=[...E.W];put("prog/"+me,o)};
 async function settle(){const g=R.g,[a,b]=g.order,res=g.res,bt=Object.values(R.bets||{}),d={},nm={};
  const add=(n,v)=>{const k=ck(n);d[k]=(d[k]||0)+v;nm[k]=n};
- if(res!=="draw"){add(g.names[res],2);add(g.names[res===a?b:a],-2)}
+ if(res!=="draw"){(g.mem?.[res]||[res]).forEach(u=>add(g.names[u],2));(g.mem?.[res===a?b:a]||[res===a?b:a]).forEach(u=>add(g.names[u],-2))}
  bt.forEach(x=>add(x.n,x.c===res?1:-1));
  await psh("log","🎯HIT: "+(bt.filter(x=>x.c===res).map(x=>x.n).join(", ")||"none"));
  const o=[];
  for(const k in d){const old=cn(nm[k]),nw=Math.max(0,old+d[k]);if(nw!==old){await put("coins/"+k+"/n",nw);o.push(nm[k]+" "+(nw>old?"+":"")+(nw-old))}}
  if(o.length)await psh("log","🪙 "+o.join(", "))}
-function setup(){const F=isF(me),done=R.boards?.[me]?.ok,cnt=R.set.walls,W=F&&!done;
- $("#sed").hidden=!W;
- $("#sinfo").textContent=W?`S・G・壁${cnt}枚を決めてね(壁 ${E.W.length}/${cnt})`:F?"相手の準備を待っています…":"対戦者が盤面を作っています…";
+function setup(){const F=isF(me),dbl=DBL(),t=tOf(me),cnt=R.set.walls,tb=R.tb?.[t]||{},
+ done=dbl?(!!R.boards?.[t]?.ok||!!tb.rd?.[me]):!!R.boards?.[me]?.ok,W=F&&!done;
+ $("#sed").hidden=!(W&&!dbl);$("#ded").hidden=!(W&&dbl);
+ if(W&&dbl)dedit(t);
+ else $("#sinfo").textContent=W?`S・G・壁${cnt}枚を決めてね(壁 ${E.W.length}/${cnt})`:F?"相手の準備を待っています…":"対戦者が盤面を作っています…";
  ["S","G","W"].forEach(t=>$("#t"+t).classList.toggle("on",tool===t));
- if(W)bd($("#sb"),{S:E.S,G:E.G,w:E.W},{all:1,
+ if(W&&!dbl)bd($("#sb"),{S:E.S,G:E.G,w:E.W},{all:1,
   tap:c=>{if(tool==="S"){E.S=c;if(E.G===c)E.G=""}else if(tool==="G"){E.G=c;if(E.S===c)E.S=""}else return;pushProg();draw()},
   edge:tool==="W"?k=>{const i=E.W.indexOf(k);if(i>=0)E.W.splice(i,1);else if(E.W.length<cnt)E.W.push(k);pushProg();draw()}:0});
  $("#wt").hidden=W||local;if(!W&&!local)wait(F);
- const s=R.slots||{};
- if(!go&&(R.admin===me||local)&&s.a&&s.b&&R.boards?.[s.a]?.ok&&R.boards?.[s.b]?.ok){go=1;R.set.coin&&R.set.bonus&&!local?startBonus():startGame()}}
-function wait(F){const s=R.slots||{},u=[s.a,s.b],spec=R.set.spec,cnt=R.set.walls,coin=!!R.set.coin,bets=R.bets||{},my=bets[me]?.c;
- $("#stat").innerHTML=u.map(x=>`<div>${R.boards?.[x]?.ok?"✓ "+esc(P(x))+"さん準備完了":esc(P(x))+"さん作成中"}</div>`).join("");
+ dfin();
+ const ids=gids();
+ if(!go&&(R.admin===me||local)&&ids.every(x=>x&&R.boards?.[x]?.ok)){go=1;R.set.coin&&R.set.bonus&&!local?startBonus():startGame()}}
+function dfin(){if(!DBL()||R.admin!==me)return;
+ for(const t of["tA","tB"]){const b=R.tb?.[t];if(b?.m&&b.m.every(u=>b.rd?.[u])&&!R.boards?.[t]?.ok&&!dwr[t]){dwr[t]=1;put("boards/"+t,{S:b.S,G:b.G,w:b.w||[],ok:1})}}}
+function dedit(t){const tb=R.tb?.[t]||{},cnt=R.set.walls,w=tb.w||[],S=tb.S||"",G=tb.G||"",n=w.length,m=tb.m||[],
+ placer=n%2===0?tb.f:m.find(x=>x!==tb.f),both=!!(S&&G),all=both&&n>=cnt,role=me===tb.s?"S":"G",myDone=role==="S"?!!S:!!G;
+ if(S&&S===G&&me===tb.g){put(`tb/${t}/G`,null);return}
+ const canTap=!both&&!myDone,canEdge=both&&n<cnt&&me===placer;
+ let msg="";
+ if(!both)msg=myDone?`決定ずみ!相手が${role==="S"?"ゴール":"スタート"}を決めるまで待ってね`:`あなたは${role==="S"?"スタート(S)":"ゴール(G)"}担当です。マスをタップして「決定」`;
+ else if(!all)msg=me===placer?`あなたの番です(壁 ${n}/${cnt})。置きたい場所をタップして「決定」`:`${P(placer)}さんが壁を置いています(壁 ${n}/${cnt})`;
+ else msg="壁が全部置かれました。「準備完了」を押してね";
+ $("#sinfo").textContent=msg;
+ if(DS&&(DS.includes(",")?!canTap:!canEdge))DS="";
+ $("#dok").hidden=!(canTap||canEdge);$("#drd").hidden=!all;
+ const ed=DS&&!DS.includes(",");
+ bd($("#db"),{S,G,w:ed?[...w,DS]:w},{all:1,hit:ed?[DS]:[],pos:DS&&DS.includes(",")?DS:undefined,col:"#8e44ad",
+  tap:canTap?c=>{DS=c;draw()}:0,
+  edge:canEdge?k=>{if(!w.includes(k)){DS=k;draw()}}:0})}
+$("#dok").onclick=async()=>{const t=tOf(me),tb=R.tb?.[t]||{},w=tb.w||[];if(!DS)return alert("先にマスや壁をタップしてね");
+ if(DS.includes(",")){const isS=me===tb.s;if(DS===(isS?tb.G:tb.S))return alert("同じ場所は選べません");await put(`tb/${t}/${isS?"S":"G"}`,DS)}
+ else{if(!reach(new Set([...w,DS]),tb.S,tb.G))return alert("ゴールへの道がなくなるので、そこには置けません");await put(`tb/${t}/w`,[...w,DS])}
+ DS="";draw()};
+$("#drd").onclick=()=>put(`tb/${tOf(me)}/rd/${me}`,1);
+function wait(F){const u=gids(),spec=R.set.spec,cnt=R.set.walls,coin=!!R.set.coin,bets=R.bets||{},my=bets[me]?.c;
+ $("#stat").innerHTML=u.map(x=>`<div>${R.boards?.[x]?.ok?"✓ "+esc(gname(x))+"さん準備完了":esc(gname(x))+"さん作成中"}</div>`).join("");
  $("#vw").hidden=F;
- if(!F){betView=Math.min(betView,1);const x=u[betView],B=R.boards?.[x]?.ok?R.boards[x]:(R.prog?.[x]||{}),n=B.ok?(B.w||[]).length:(B.n||0);
-  $("#v0").textContent=P(u[0])+"さん";$("#v1").textContent=P(u[1])+"さん";
+ if(!F){betView=Math.min(betView,1);const x=u[betView],B=R.boards?.[x]?.ok?R.boards[x]:((DBL()?R.tb:R.prog)?.[x]||{}),n=(B.ok||DBL())?(B.w||[]).length:(B.n||0);
+  $("#v0").textContent=gname(u[0])+"さん";$("#v1").textContent=gname(u[1])+"さん";
   $("#v0").classList.toggle("on",betView===0);$("#v1").classList.toggle("on",betView===1);
   bd($("#vb"),{S:B.S,G:B.G,w:spec?(B.w||[]):[]},{all:1});
-  $("#vc").textContent=`${P(x)}さんの壁 ${n}/${cnt}`+(spec?"":"(壁の位置はひみつ)")}
+  $("#vc").textContent=`${gname(x)}さんの壁 ${n}/${cnt}`+(spec?"":"(壁の位置はひみつ)")}
  const canBet=coin&&!F;
  $("#bet").hidden=!canBet;$("#rkw").hidden=!coin;
  if(canBet){const mc=cn(name),k=x=>Object.values(bets).filter(b=>b.c===x).length;
   $("#mc").textContent=`🪙 あなたのコイン:${mc}枚`+(mc<1?"(0枚なので賭けられません)":"(1枚賭けます)");
-  $("#bo").innerHTML=[[s.a,P(s.a)+"さん"],[s.b,P(s.b)+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
+  $("#bo").innerHTML=[[u[0],gname(u[0])+"さん"],[u[1],gname(u[1])+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
  if(coin)$("#rk").innerHTML=rankHtml();
  $("#bhint").textContent=R.set.bonus?"全員の壁ができるまで変えられます(誰に賭けたかは見えません)":"ゲームが始まるまで変えられます(誰に賭けたかは見えません)"}
 $("#v0").onclick=()=>{betView=0;draw()};$("#v1").onclick=()=>{betView=1;draw()};
@@ -125,13 +164,14 @@ $("#bo").onclick=e=>{const b=e.target.closest("button");if(b&&R.phase==="setup"&
 ["S","G","W"].forEach(t=>$("#t"+t).onclick=()=>{tool=t;draw()});
 $("#rd").onclick=()=>{if(!E.S||!E.G||E.S===E.G||E.W.length!==R.set.walls||!reach(new Set(E.W),E.S,E.G))
  return alert("S・G・壁の数を確認してね。SからGへ必ず行ける道が必要です");put(`boards/${me}`,{S:E.S,G:E.G,w:E.W,ok:1})};
-async function startGame(){const[a,b]=[R.slots.a,R.slots.b].sort(()=>Math.random()-.5),B=R.boards;
- await put("g",{order:[a,b],turn:0,stage:"start",names:{[a]:P(a),[b]:P(b)},pos:{[a]:B[b].S,[b]:B[a].S},path:{[a]:[B[b].S],[b]:[B[a].S]},ev:{id:Date.now(),k:""}});
- await psh("log",P(a)+":START");await put("phase","play")}
+async function startGame(){const ids=gids(),[a,b]=[...ids].sort(()=>Math.random()-.5),B=R.boards,d=DBL(),mm=d?{tA:mem("tA"),tB:mem("tB")}:{[a]:[a],[b]:[b]},names={};
+ if(d)["tA","tB"].forEach(t=>{names[t]=mem(t).map(P).join("&");mem(t).forEach(u=>names[u]=P(u))});else{names[a]=P(a);names[b]=P(b)}
+ await put("g",{order:[a,b],turn:0,stage:"start",names,mem:mm,f:{[a]:Math.random()<.5?0:1,[b]:Math.random()<.5?0:1},cnt:{[a]:0,[b]:0},pos:{[a]:B[b].S,[b]:B[a].S},path:{[a]:[B[b].S],[b]:[B[a].S]},ev:{id:Date.now(),k:""}});
+ await psh("log",names[a]+":START");await put("phase","play")}
 
 /* ---- bonus wall ---- */
 const rankHtml=()=>Object.values(R.players||{}).map(p=>[p.name,cn(p.name)]).sort((x,y)=>y[1]-x[1]||x[0].localeCompare(y[0])).map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x[0])}</td><td>🪙${x[1]}</td></tr>`).join("");
-async function startBonus(){const s=R.slots,sp=Object.keys(R.players||{}).filter(u=>u!==s.a&&u!==s.b);
+async function startBonus(){const sp=Object.keys(R.players||{}).filter(u=>!isF(u));
  if(!sp.length)return startGame();
  const q={};sp.forEach(u=>q[u]=R.players[u].name);
  await put("bonus",null);await put("bgo",null);await put("bq",q);await put("bt",Date.now()+so+15000);await put("phase","bonus")}
@@ -143,9 +183,9 @@ function bTick(){const i=bInfo(),t=Math.max(0,i.left);
  $("#bwho").innerHTML=i.todo.map(u=>`<div>${esc(i.q[u])}さん(観戦者)ボーナスウォール指定中…</div>`).join("");
  if(!go2&&((R.admin===me&&(i.left<=0||!i.todo.length))||(isF(me)&&i.left<=-4))){go2=1;claim().then(ok=>ok&&startGame())}}
 function pickW(o,k){if((R.boards?.[o]?.w||[]).includes(k))put("bonus/"+me,{o,k,n:name})}
-function bonus(){const s=R.slots||{},a=s.a,b=s.b,F=isF(me),i=bInfo(),B=R.boards||{};
+function bonus(){const[a,b]=gids(),F=isF(me),i=bInfo(),B=R.boards||{};
  $("#bsel").hidden=!i.sel;$("#bwait").hidden=i.sel;
- if(i.sel){$("#bt1").textContent=P(a)+"さんの盤面";$("#bt2").textContent=P(b)+"さんの盤面";
+ if(i.sel){$("#bt1").textContent=gname(a)+"さんの盤面";$("#bt2").textContent=gname(b)+"さんの盤面";
   bd($("#bb1"),B[a],{all:1,edge:k=>pickW(a,k)});bd($("#bb2"),B[b],{all:1,edge:k=>pickW(b,k)})}
  $("#bpl").hidden=!F;if(F)$("#brk").innerHTML=rankHtml();
  bTick()}
@@ -154,9 +194,10 @@ async function bonusHit(p,k,first){if(!first||local||!R.set.coin||!R.set.bonus)r
  for(const x of Object.values(R.bonus||{}))if(x.o===o&&x.k===k){await put("coins/"+ck(x.n)+"/n",cn(x.n)+1);await psh("log","💥 "+x.n+"さんのボーナスウォール命中 +1")}}
 
 /* ---- play ---- */
-async function turn(i,last){const g=R.g;await put("g/turn",i);await psh("log",PN(g.order[i])+(last?":LAST TURN":":TURN"));await put("g/tn",{id:Date.now(),u:g.order[i],last:last?1:0})}
+async function turn(i,last){const g=R.g,t=g.order[i],mm=g.mem?.[t]||[t],mv=mm[((g.f?.[t]||0)+(g.cnt?.[t]||0))%mm.length];
+ await put("g/turn",i);await put("g/mv",mv);await put("g/cnt/"+t,(g.cnt?.[t]||0)+1);await psh("log",PN(mv)+(last?":LAST TURN":":TURN"));await put("g/tn",{id:Date.now(),u:mv,last:last?1:0})}
 async function step(p,to){if(busy)return;busy=1;
- try{const g=R.g,[a,b]=g.order,B=R.boards[p===a?b:a],from=g.pos[p],k=wk(from,to),pre=`${PN(p)}:${cl(from)} to ${cl(to)}...`;
+ try{const g=R.g,[a,b]=g.order,B=R.boards[p===a?b:a],from=g.pos[p],k=wk(from,to),pre=`${PN(g.mv||p)}:${cl(from)} to ${cl(to)}...`;
   if((B.w||[]).includes(k)){
    const first=!(g.hit?.[p]||[]).includes(k);await put(`g/hit/${p}`,[...(g.hit?.[p]||[]),k]);await psh("log",pre+"MISS");await bonusHit(p,k,first);await put("g/ev",{id:Date.now(),k:"ng"});
    if(g.sd){await put("g/res",a);await psh("log",PN(a)+":WIN");await put("g/stage","end")}else await turn(1-g.turn)
@@ -171,12 +212,12 @@ async function step(p,to){if(busy)return;busy=1;
 function cpu(){const g=R.g;if(!local||busy||cpuT||!g||g.stage!=="play"||g.order[g.turn]!=="cpu")return;
  cpuT=setTimeout(()=>{cpuT=0;const g=R.g;if(g.stage!=="play"||g.order[g.turn]!=="cpu")return;
   step("cpu",cpuMove(lvl,g.pos.cpu,new Set(g.hit?.cpu||[]),new Set(g.path.cpu),R.boards[me].G))},700)}
-function play(){const g=R.g,[a,b]=g.order,F=isF(me),rev=g.stage==="reveal",B=R.boards||{},spec=R.set?.spec;
- const[d1,s1,d2,s2]=F?[a===me?b:a,me,me,a===me?b:a]:[a,b,b,a];
+function play(){const g=R.g,[a,b]=g.order,mt=Object.keys(g.mem||{}).find(t=>g.mem[t].includes(me)),F=!!mt,rev=g.stage==="reveal",B=R.boards||{},spec=R.set?.spec;
+ const[d1,s1,d2,s2]=F?[a===mt?b:a,mt,mt,a===mt?b:a]:[a,b,b,a];
  $("#t1").textContent=F?"Crack a Grid(相手の盤面)":PN(d1)+"の盤面";
  $("#t2").textContent=F?"Design a Grid(自分の盤面)":PN(d2)+"の盤面";
  bd($("#b1"),B[d1],{path:g.path?.[s1],pos:g.pos?.[s1],hit:g.hit?.[s1],all:rev||(!F&&spec),col:"#2874a6",
-  tap:F?c=>{if(g.stage==="play"&&g.order[g.turn]===me&&nb(g.pos[me]).includes(c))step(me,c)}:0});
+  tap:F?c=>{if(g.stage==="play"&&g.mv===me&&nb(g.pos[mt]).includes(c))step(mt,c)}:0});
  bd($("#b2"),B[d2],{path:g.path?.[s2],pos:g.pos?.[s2],hit:g.hit?.[s2],all:F||rev||spec,col:"#c0392b"});
  const lgE=$("#lg"),keep=lgE.scrollTop,hold=lgHold||Date.now()-lgTouch<3000;
  lgE.innerHTML=msgs(R.log).slice(-300).map(x=>`<div${x.startsWith("💬")?' class="cm"':""}>${esc(x)}</div>`).join("");
@@ -185,12 +226,12 @@ function play(){const g=R.g,[a,b]=g.order,F=isF(me),rev=g.stage==="reveal",B=R.b
  {const e=$("#bs");e.hidden=local||!R.set.coin;
   if(!e.hidden){const bt=R.bets||{},c=k=>Object.values(bt).filter(x=>x.c===k).length,my=bt[me];
    e.textContent=`🎲 ${PN(a)} ${c(a)}票 / ${PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票`+(F?"":` ・あなた:`+(my?(my.c==="draw"?"引き分け":PN(my.c)):"なし"))+` ・🪙${cn(name)}`}}
- if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===(g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);settle()}
- if(g.stage==="start"&&!stT&&(local||me===a))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
+ if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===wr(g,g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);settle()}
+ if(g.stage==="start"&&!stT&&(local||me===wr(g,a)))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
 {const e=$("#lg"),rel=()=>{lgHold=0;lgTouch=Date.now();setTimeout(()=>{if(!lgHold&&Date.now()-lgTouch>=2900)e.scrollTop=e.scrollHeight},3000)};
  e.addEventListener("touchstart",()=>lgHold=1,{passive:true});e.addEventListener("touchend",rel);e.addEventListener("touchcancel",rel);e.addEventListener("wheel",rel,{passive:true})}
-$("#back").onclick=async()=>{if(local)return location.reload();await put("phase","lobby");await put("g",null);await put("boards",null);await put("bets",null);await put("prog",null);await put("bonus",null);await put("bq",null);await put("bt",null);await put("bgo",null)};
+$("#back").onclick=async()=>{if(local)return location.reload();await put("phase","lobby");await put("g",null);await put("boards",null);await put("bets",null);await put("prog",null);await put("bonus",null);await put("bq",null);await put("bt",null);await put("bgo",null);await put("tb",null)};
 
 /* ---- overlay / fx ---- */
 function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
@@ -202,11 +243,11 @@ function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
  $("#ov").innerHTML=h;$("#ov").hidden=!h;
  if(g.ev&&g.ev.id!==lastEv){lastEv=g.ev.id;if(g.ev.k){const f=$("#fx"),sp=$("#stamp"),ng=g.ev.k==="ng";f.textContent=g.ev.k==="ok"?"〇":"✕";f.className=g.ev.k;f.hidden=false;sp.hidden=!ng;setTimeout(()=>{f.hidden=true;sp.hidden=true},ng?1000:500)}}}
 $("#ov").onclick=()=>{const g=R.g,st=g?.stage,n={goal:g?.after,sudden:"play",end:"reveal"}[st];if(!n)return;
- const lg=local||me===g.order[0];
+ const lg=local||me===wr(g,g.order[0]);
  if(st==="goal"&&n==="sudden"&&lg)psh("log","SUDDEN DEATH");
  if(st==="goal"&&n==="end"&&lg)psh("log",g.res==="draw"?"DRAW":PN(g.res)+":WIN");
  if(st==="end"&&lg)psh("log","REVEAL");
- if(st==="sudden"){put("g/sd",1);turn(1,1)}put("g/stage",n)};
+ if(st==="sudden"&&!g.sd){put("g/sd",1);turn(1,1)}put("g/stage",n)};
 function tnfx(){const g=R.g;if(g?.tn&&g.tn.id!==lastTn){lastTn=g.tn.id;const t=$("#tn");t.textContent=PN(g.tn.u)+(g.tn.last?"さんのラストターン！！":"さんのターン！！");t.hidden=false;setTimeout(()=>t.hidden=true,1100)}}
 
 /* ---- chat ---- */
@@ -219,7 +260,7 @@ document.querySelectorAll(".chat").forEach(c=>{const i=c.querySelector("input"),
 function draw(){if(!R||!R.phase)return;const ph=R.phase;
  if(!local&&name){const cr=onDisconnect(ref(db,`rooms/${rid}/coins/${ck(name)}/off`));
   if(R.set?.coin&&!cdReg){cdReg=1;cr.set(serverTimestamp())}else if(!R.set?.coin&&cdReg){cdReg=0;cr.cancel()}}
- if(ph!==lastPh){lastPh=ph;if(ph==="setup"){E={S:"",G:"",W:[]};tool="S";pushProg()}}
+ if(ph!==lastPh){lastPh=ph;if(ph==="setup"){E={S:"",G:"",W:[]};tool="S";DS="";dwr={};pushProg()}}
  if(ph!=="setup")go=0;if(ph!=="bonus")go2=0;
  show(ph==="lobby"?"lobby":ph==="setup"?"setup":ph==="bonus"?"bonus":"game");
  if(ph==="lobby")lobby();else if(ph==="setup")setup();else if(ph==="bonus")bonus();else if(R.g)play();
