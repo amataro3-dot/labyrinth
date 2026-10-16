@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=13"></head><body>
+<link rel="stylesheet" href="style.css?v=15"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -23,7 +23,11 @@
   <div class="row"><button id="d_b">B1</button><span id="n_b"></span></div>
   <div class="row"><button id="d_b2">B2</button><span id="n_b2"></span></div>
  </div>
- <div id="adm" hidden>壁の枚数 <select id="wn"></select>
+ <div id="tlob" hidden>
+  <p id="tpl"></p>
+  <div class="row"><button id="tobs">観戦にする</button><button id="tgo" hidden>大会を始める</button></div>
+ </div>
+ <div id="adm" hidden>大会 <select id="tt"><option value="">通常対戦</option><option value="tour">トーナメント</option><option value="ls" disabled>リーグ戦(シングル)(準備中)</option><option value="ld" disabled>リーグ戦(ダブルス)(準備中)</option><option value="off" disabled>公式戦(準備中)</option></select><br>壁の枚数 <select id="wn"></select>
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
   <label><input type="checkbox" id="bw"> ボーナスウォール</label>
@@ -63,18 +67,26 @@
   <div id="bpl" hidden><h3>🪙 コインランキング</h3><table id="brk"></table><div id="bwho"></div></div>
  </div>
 </section>
+<section id="tour" hidden>
+ <h3 id="tmsg2"></h3>
+ <div id="tbrd"></div>
+ <p id="twait"></p>
+ <div class="row"><button id="tstart" hidden>開始</button><button id="tend" hidden>大会を終了(ロビーへ)</button></div>
+</section>
 <section id="game" hidden>
  <h3 id="t1"></h3><svg id="b1" viewBox="0 0 354 354"></svg>
  <p id="mst" hidden></p>
  <div class="lgrow"><div id="lg"></div><button id="al">全ログ</button></div>
  <p id="bs" class="bs" hidden></p>
  <button id="back" hidden>ロビーに戻る</button>
+ <div id="tpick" hidden><p id="tmsg"></p><div class="row"><button id="tnx">次へ</button><button id="tw1"></button><button id="tw2"></button><button id="twr">ランダム</button></div></div>
  <h3 id="t2"></h3><svg id="b2" viewBox="0 0 354 354"></svg>
  <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
 </section>
 <button id="out">ルームを出る</button>
 <img id="stamp" src="stamp.png" hidden alt="">
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
+<button id="tb" hidden>大会表</button><div id="tp" hidden><div id="tpc"></div><button id="tpx">閉じる</button></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=13"></script>
+<script type="module" src="main.js?v=15"></script>
 </body></html>
