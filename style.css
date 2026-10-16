@@ -48,3 +48,16 @@ h1{font-size:20px;margin:4px 0}
 #dbl button{min-width:56px}
 #dbl span{flex:1;text-align:left;font-weight:700}
 #dbl button.on,#md button.on{background:#1e8449}
+#bo button{word-break:break-all;font-size:13px}
+#mst{font-size:14px;margin:4px 0}
+#mul .row{gap:6px}
+#mul button{flex:1;min-width:0}
+#mls{margin:4px 0}
+#tb{position:fixed;top:6px;left:6px;padding:4px 10px;font-size:12px;z-index:50}
+#tp{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);z-index:60;overflow:auto;padding:16px}
+.tr{margin:10px 0 2px;font-weight:700}
+#tbrd div,#tpc div{padding:3px 0}
+.tcur{background:#fff3cd;border-radius:4px}
+#tpick{display:flex;flex-direction:column;gap:6px}
+#tpick .row{flex-wrap:wrap;gap:6px}
+#tlob .row{gap:6px}
