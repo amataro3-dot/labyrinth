@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Labyrinth</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=15"></head><body>
+<link rel="stylesheet" href="style.css?v=16"></head><body>
 <h1>Labyrinth</h1>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
@@ -25,9 +25,10 @@
  </div>
  <div id="tlob" hidden>
   <p id="tpl"></p>
+  <div id="tcfg" class="row" hidden><span>試合数</span><select id="tnn"></select></div>
   <div class="row"><button id="tobs">観戦にする</button><button id="tgo" hidden>大会を始める</button></div>
  </div>
- <div id="adm" hidden>大会 <select id="tt"><option value="">通常対戦</option><option value="tour">トーナメント</option><option value="ls" disabled>リーグ戦(シングル)(準備中)</option><option value="ld" disabled>リーグ戦(ダブルス)(準備中)</option><option value="off" disabled>公式戦(準備中)</option></select><br>壁の枚数 <select id="wn"></select>
+ <div id="adm" hidden>大会 <select id="tt"><option value="">通常対戦</option><option value="tour">トーナメント</option><option value="ls">リーグ戦(シングル)</option><option value="ld">リーグ戦(ダブルス)</option><option value="off">公式戦</option></select><br>壁の枚数 <select id="wn"></select>
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
   <label><input type="checkbox" id="bw"> ボーナスウォール</label>
@@ -71,6 +72,7 @@
  <h3 id="tmsg2"></h3>
  <div id="tbrd"></div>
  <p id="twait"></p>
+ <div id="tfmt" hidden><p>次の試合の形式を選んでください</p><div class="row"><button id="tf1">シングル</button><button id="tf2">ダブルス</button><button id="tf3">マルチ</button></div></div>
  <div class="row"><button id="tstart" hidden>開始</button><button id="tend" hidden>大会を終了(ロビーへ)</button></div>
 </section>
 <section id="game" hidden>
@@ -88,5 +90,5 @@
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <button id="tb" hidden>大会表</button><div id="tp" hidden><div id="tpc"></div><button id="tpx">閉じる</button></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=15"></script>
+<script type="module" src="main.js?v=16"></script>
 </body></html>
