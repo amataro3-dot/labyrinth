@@ -29,6 +29,7 @@ h1{font-size:20px;margin:4px 0}
 .cm{color:#8e44ad}
 #out{position:fixed;top:6px;right:6px;padding:4px 8px;font-size:12px;z-index:5}
 #title:not([hidden])~#out{display:none}
+#stamp2{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(55vw,260px);z-index:12;pointer-events:none}
 #stamp{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(75vw,360px);z-index:12;pointer-events:none}
 #wt>div{display:flex;flex-direction:column;gap:6px}
 #stat div{padding:4px;font-weight:700}
@@ -36,34 +37,3 @@ h1{font-size:20px;margin:4px 0}
 #vb{max-width:260px;margin:0 auto}#vc{margin:0;font-size:14px}
 #bo{display:flex;flex-direction:row;gap:6px}#bo button{flex:1;min-width:0;padding:8px 4px}
 .bs{font-size:12px;margin:2px 0;color:#555}
-#rk{width:100%;border-collapse:collapse;font-size:14px}
-#rk td{padding:3px 6px;border-bottom:1px solid #ddd}
-#md button{flex:1;min-width:0;font-size:12px}
-#md button:disabled{opacity:.5}
-#brk{width:100%;border-collapse:collapse;font-size:14px}
-#brk td{padding:3px 6px;border-bottom:1px solid #ddd}
-#bwho{margin-top:6px;font-weight:700}
-#bmsg{font-weight:700}
-#dbl .row{align-items:center;gap:8px}
-#dbl button{min-width:56px}
-#dbl span{flex:1;text-align:left;font-weight:700}
-#dbl button.on,#md button.on{background:#1e8449}
-#bo button{word-break:break-all;font-size:13px}
-#mst{font-size:14px;margin:4px 0}
-#mul .row{gap:6px}
-#mul button{flex:1;min-width:0}
-#mls{margin:4px 0}
-#tb{position:fixed;top:6px;left:6px;padding:4px 10px;font-size:12px;z-index:50}
-#tp{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);z-index:60;overflow:auto;padding:16px}
-.tr{margin:10px 0 2px;font-weight:700}
-#tbrd div,#tpc div{padding:3px 0}
-.tcur{background:#fff3cd;border-radius:4px}
-#tpick{display:flex;flex-direction:column;gap:6px}
-#tpick .row{flex-wrap:wrap;gap:6px}
-#tlob .row{gap:6px}
-.tk{width:100%;border-collapse:collapse;font-size:13px}
-.tk td,.tk th{padding:3px 4px;border-bottom:1px solid #ddd;text-align:left}
-#tfmt{margin:6px 0}
-#tfmt .row{gap:6px}
-#tfmt button{flex:1;min-width:0}
-#tcfg{align-items:center;gap:8px}
