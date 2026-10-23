@@ -1,7 +1,10 @@
 import{initializeApp}from"https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
 import{getAuth,signInAnonymously}from"https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+import{initializeAppCheck,ReCaptchaEnterpriseProvider}from"https://www.gstatic.com/firebasejs/13.0.0/firebase-app-check.js";
 import{getDatabase,ref,set,push,get,onValue,runTransaction,onDisconnect,remove,serverTimestamp}from"https://www.gstatic.com/firebasejs/13.0.0/firebase-database.js";
 const app=initializeApp({apiKey:"AIzaSyBxf-38qXL-cUFIdJFd_x0JCJyXlHOKZHE",authDomain:"labyrinth-game-bc5aa.firebaseapp.com",databaseURL:"https://labyrinth-game-bc5aa-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"labyrinth-game-bc5aa",appId:"1:534431752677:web:677413dac8ba95b0e50f0c"});
+/* App Check: このサイトから来たアクセスだと証明する(サイトキーは公開して大丈夫なもの。失敗してもゲームは続ける) */
+try{initializeAppCheck(app,{provider:new ReCaptchaEnterpriseProvider("6LfFffwtAAAAAKMoDAtqJDlgLK720RWBuBENti2t"),isTokenAutoRefreshEnabled:true})}catch(e){console.warn("App Check",e)}
 export const db=getDatabase(app);
 export const login=async()=>(await signInAnonymously(getAuth(app))).user.uid;
 export{ref,set,push,get,onValue,runTransaction,onDisconnect,remove,serverTimestamp};

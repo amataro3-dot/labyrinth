@@ -1,4 +1,4 @@
-import*as C from"./core.js?v=10";
+import*as C from"./core.js?v=11";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
