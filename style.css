@@ -68,3 +68,18 @@ h1{font-size:20px;margin:4px 0}
 #tfmt .row{gap:6px}
 #tfmt button{flex:1;min-width:0}
 #tcfg{align-items:center;gap:8px}
+/* フロア対戦 */
+#flr{display:flex;flex-direction:column;gap:8px}
+.fl{border:2px solid #ccc;border-radius:10px;padding:6px 8px;background:#fff;text-align:left}
+.fl.full{border-color:#1e8449}
+.flh{display:flex;align-items:center;gap:6px}.flh b{flex:1}
+.flh button{padding:4px 8px;font-size:12px;background:#999}.flh button.on{background:#1e8449}
+.fls{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px}
+.fseat{display:flex;align-items:center;gap:6px}.fseat button{min-width:44px;padding:6px 8px}.fseat span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ftab{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:20;background:#fffe;padding:4px;border-radius:12px;box-shadow:0 2px 8px #0003}
+#ftab button{padding:6px 10px;font-size:14px;flex:0 0 auto}
+#ftab:not([hidden])~section{padding-bottom:56px}
+#fst{font-size:14px;font-weight:700;margin:4px 0}
+#tfl{display:flex;flex-direction:column;gap:4px}
+#tfl .row{flex-wrap:wrap}
+#parw{font-size:14px}

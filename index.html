@@ -9,8 +9,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Muddy's Games">
-<link rel="stylesheet" href="style.css?v=17"></head><body>
+<link rel="stylesheet" href="style.css?v=19"></head><body>
 <h1>Labyrinth .VS</h1>
+<div id="ftab" class="tabs" hidden></div>
 <section id="title">
  <input id="nm" maxlength="10" placeholder="なまえ">
  <button id="mk">ルームを作成</button>
@@ -26,6 +27,7 @@
   <div class="row"><button id="mq">出題者になる</button><button id="mj">参加する</button><button id="mx" hidden>やめる</button></div>
   <p id="mls"></p>
  </div>
+ <div id="flr" hidden></div>
  <div id="dbl" hidden>
   <div class="row"><button id="d_a">A1</button><span id="n_a"></span></div>
   <div class="row"><button id="d_a2">A2</button><span id="n_a2"></span></div>
@@ -34,6 +36,7 @@
  </div>
  <div id="tlob" hidden>
   <p id="tpl"></p>
+  <label id="parw" hidden><input type="checkbox" id="par"> フロアで同時に進める</label>
   <div id="tcfg" class="row" hidden><span>試合数</span><select id="tnn"></select></div>
   <div class="row"><button id="tobs">観戦にする</button><button id="tgo" hidden>大会を始める</button></div>
  </div>
@@ -41,7 +44,7 @@
   <label><input type="checkbox" id="sp"> 観戦者に壁を見せる</label>
   <label><input type="checkbox" id="cb"> コインバトル</label>
   <label><input type="checkbox" id="bw"> ボーナスウォール</label>
-  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2">ダブルス</button><button id="m3">マルチ</button></div>
+  <div class="row" id="md"><button id="m1" class="on">シングル</button><button id="m2">ダブルス</button><button id="m3">マルチ</button><button id="m4">フロア</button></div>
   <span id="tw" hidden>周の上限 <select id="tl"></select></span>
   <button id="st">ゲームスタート</button></div>
  <p id="aset"></p>
@@ -89,8 +92,9 @@
  <p id="mst" hidden></p>
  <div class="lgrow"><div id="lg"></div><button id="al">全ログ</button></div>
  <p id="bs" class="bs" hidden></p>
+ <p id="fst" hidden></p>
  <button id="back" hidden>ロビーに戻る</button>
- <div id="tpick" hidden><p id="tmsg"></p><div class="row"><button id="tnx">次へ</button><button id="tw1"></button><button id="tw2"></button><button id="twr">ランダム</button></div></div>
+ <div id="tpick" hidden><p id="tmsg"></p><div id="tfl"></div><div class="row"><button id="tnx">次へ</button><button id="tw1"></button><button id="tw2"></button><button id="twr">ランダム</button></div></div>
  <h3 id="t2"></h3><svg id="b2" viewBox="0 0 354 354"></svg>
  <div class="chat"><div class="msgs"></div><div class="cin"><input maxlength="60"><button>送信</button></div></div>
 </section>
@@ -99,5 +103,5 @@
 <div id="ov" hidden></div><div id="tn" hidden></div><div id="fx" hidden></div>
 <button id="tb" hidden>大会表</button><div id="tp" hidden><div id="tpc"></div><button id="tpx">閉じる</button></div>
 <script>onerror=(m,s,l)=>alert(m+" L"+l);addEventListener("unhandledrejection",e=>alert(e.reason))</script>
-<script type="module" src="main.js?v=18"></script>
+<script type="module" src="main.js?v=19"></script>
 </body></html>
