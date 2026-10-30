@@ -83,3 +83,11 @@ h1{font-size:20px;margin:4px 0}
 #tfl{display:flex;flex-direction:column;gap:4px}
 #tfl .row{flex-wrap:wrap}
 #parw{font-size:14px}
+/* 言語(v=21): タイトルの切りかえ、スタンプの下の訳、英語・韓国語の大きな文字 */
+.row.lang button{flex:1;font-size:14px;padding:8px 4px}
+.cap{display:none;position:fixed;left:50%;transform:translateX(-50%) rotate(-6deg);z-index:13;pointer-events:none;font-size:min(13vw,60px);font-weight:900;white-space:nowrap;-webkit-text-stroke:2px #fff;paint-order:stroke fill;text-shadow:0 3px 10px #0008}
+.cap.stamp{top:calc(50% + min(32vw,150px));color:#e74c3c}
+.cap.stamp2{top:calc(50% + min(30vw,140px));color:#2e86de}
+#stamp:not([hidden])+.cap,#stamp2:not([hidden])+.cap{display:block}
+html:not([lang=ja]) .huge{white-space:normal;font-size:min(40px,9vw);text-align:center}
+html:not([lang=ja]) .big{font-size:28px;text-align:center}

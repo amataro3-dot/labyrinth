@@ -1,4 +1,5 @@
-import*as C from"./core.js?v=20";
+import*as C from"./core.js?v=21";
+import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=21";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},ROOM={},VF="",fpick={},ffd={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
@@ -34,16 +35,16 @@ const gids=()=>DBL()?["tA","tB"]:MULTI()?[R.slots?.q]:[R.slots?.a,R.slots?.b];
 const gname=id=>DBL()?mem(id).map(P).join("&"):P(id);
 const fmode=F=>R.set?.fm?.[F]||"single",flab=(m,k)=>m==="double"?SL[k]:(k==="a"?"1":"2");
 const ffull=F=>fkeys(fmode(F)).every(k=>R.fs?.[F]?.[k]&&R.players?.[R.fs[F][k]]);
-const slab=u=>{if(R.set?.mode==="floor"&&R.phase==="lobby"){for(const F of FL)for(const k in R.fs?.[F]||{})if(R.fs[F][k]===u)return F+"-"+flab(fmode(F),k);return "観戦"}const k=Object.keys(R.slots||{}).find(x=>R.slots[x]===u);return k?(DBL()?SL[k]:MULTI()?(k==="q"?"出題者":"参加"):"対戦"):"観戦"};
+const slab=u=>{if(R.set?.mode==="floor"&&R.phase==="lobby"){for(const F of FL)for(const k in R.fs?.[F]||{})if(R.fs[F][k]===u)return F+"-"+flab(fmode(F),k);return T("観戦")}const k=Object.keys(R.slots||{}).find(x=>R.slots[x]===u);return k?(DBL()?SL[k]:MULTI()?(k==="q"?T("出題者"):T("参加")):T("対戦")):T("観戦")};
 const wr=(g,id)=>g.mem?.[id]?.[0]||id;
-const blab=id=>{const pl=R.phase==="play"&&R.g,mm=DBL()&&((pl&&pl.mem?.[id])||mem(id));return mm?`${id==="tA"?"A":"B"}(${mm.map(u=>((pl&&pl.names?.[u])||P(u))+"さん").join("、")})`:""};
+const blab=id=>{const pl=R.phase==="play"&&R.g,mm=DBL()&&((pl&&pl.mem?.[id])||mem(id));return mm?`${id==="tA"?"A":"B"}(${mm.map(u=>SAN((pl&&pl.names?.[u])||P(u))).join(T("、"))})`:""};
 const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
 const show=id=>["title","lobby","setup","bonus","tour","game"].forEach(s=>$("#"+s).hidden=s!==id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
-const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert("なまえを入力してね"),0);
-for(let i=10;i<=20;i++)$("#wn").add(new Option(i+"枚",i));
-for(let i=10;i<=20;i++)$("#cw").add(new Option("壁"+i+"枚",i));
-for(let i=15;i<=20;i++)$("#tl").add(new Option(i+"周",i));
+const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert(T("なまえを入力してね")),0);
+for(let i=10;i<=20;i++)$("#wn").add(new Option(T("{n}枚",{n:i}),i));
+for(let i=10;i<=20;i++)$("#cw").add(new Option(T("壁{n}枚",{n:i}),i));
+for(let i=15;i<=20;i++)$("#tl").add(new Option(T("{n}周",{n:i}),i));
 
 const ck=s=>String(s).replace(/[.$#\[\]\/]/g,"_");
 const cn=nm=>R.coins?.[ck(nm)]?.n??0;
@@ -51,12 +52,14 @@ const PAL=["#e6194b","#3cb44b","#4363d8","#f58231","#911eb7","#008080","#b8860b"
 const colOf=n=>PAL[R.colors?.[ck(n)]]||"";
 const nh=n=>{const c=colOf(n);return c?`<span style="color:${c};font-weight:700">${esc(n)}</span>`:esc(n)};
 const gnh=id=>DBL()?mem(id).map(u=>nh(P(u))).join("&amp;"):nh(P(id));
+/* ログの1行に色をつける。Firebase のログは日本語の形のまま。ここで各自の言語にする(i18n.js) */
 const lgc=x=>{let m;
+ if(m=x.match(/^— 第(\d+)周 —$/u))return "— "+esc(T("第{n}周",{n:m[1]}))+" —";
  if(m=x.match(/^🎯HIT: (.*)$/u))return "🎯HIT: "+m[1].split(", ").map(nh).join(", ");
  if(m=x.match(/^🪙 (.*)$/u))return "🪙 "+m[1].split(", ").map(t=>{const i=t.lastIndexOf(" ");return i<0?esc(t):nh(t.slice(0,i))+esc(t.slice(i))}).join(", ");
- if(m=x.match(/^💥 (.+?)(さんのボーナスウォール命中 .*)$/u))return "💥 "+nh(m[1])+esc(m[2]);
- if(m=x.match(/^🏁 (.*)$/u))return "🏁 "+m[1].split(", ").map(t=>{const k=t.match(/^(\d+位 )(.+)$/u);return k?esc(k[1])+nh(k[2]):esc(t)}).join(", ");
- if(m=x.match(/^((?:💬)?)([^:]+):([\s\S]*)$/u)){const ps=m[2].split("&"),nm=ps.every(p=>colOf(p))?ps.map(nh).join("&amp;"):nh(m[2]);return m[1]+nm+":"+esc(m[3])}
+ if(m=x.match(/^💥 (.+?)さんのボーナスウォール命中 \+2$/u))return "💥 "+T("{n}のボーナスウォール命中 +2",{n:SAN(nh(m[1]))});
+ if(m=x.match(/^🏁 (.*)$/u))return "🏁 "+m[1].split(", ").map(t=>{const k=t.match(/^(\d+)位 (.+)$/u),q=t.match(/^出題者 (.+) の勝ち\(誰もゴールできず\)$/u);return k?esc(T("{n}位 ",{n:k[1]}))+nh(k[2]):q?T("出題者 {n} の勝ち(誰もゴールできず)",{n:nh(q[1])}):esc(t)}).join(", ");
+ if(m=x.match(/^((?:💬)?)([^:]+):([\s\S]*)$/u)){const ps=m[2].split("&"),nm=ps.every(p=>colOf(p))?ps.map(nh).join("&amp;"):nh(m[2]);return m[1]+nm+":"+esc(!m[1]&&m[3]==="START(出題者)"?"START("+T("出題者")+")":m[3])}
  return esc(x)};
 
 /* ---- title / join ---- */
@@ -64,19 +67,19 @@ $("#mk").onclick=async()=>{if(!nameOk())return;me??=await C.login();let id;
  do{id=String(1000+Math.floor(Math.random()*9000))}while((await get(ref(db,"rooms/"+id))).exists());
  await set(ref(db,"rooms/"+id),{admin:me,phase:"lobby",set:{walls:10,spec:true}});join(id)};
 $("#jn").onclick=async()=>{if(!nameOk())return;me??=await C.login();const id=$("#rid").value.trim(),s=await get(ref(db,"rooms/"+id));
- if(!s.exists())return alert("ルームが見つかりません");
- if(Object.keys(s.val().players||{}).length>=8)return alert("満員です(最大8人)");join(id)};
+ if(!s.exists())return alert(T("ルームが見つかりません"));
+ if(Object.keys(s.val().players||{}).length>=8)return alert(T("満員です(最大8人)"));join(id)};
 $("#cp").onclick=()=>{if(!nameOk())return;me="me";local=1;lvl=+$("#lv").value;const cw=+$("#cw").value;
- R={admin:me,phase:"setup",set:{walls:cw,spec:false,coin:false},players:{me:{name,t:1},cpu:{name:"コンピューター",t:2}},slots:{a:me,b:"cpu"},boards:{cpu:cpuBoard(cw)}};draw()};
+ R={admin:me,phase:"setup",set:{walls:cw,spec:false,coin:false},players:{me:{name,t:1},cpu:{name:T("コンピューター"),t:2}},slots:{a:me,b:"cpu"},boards:{cpu:cpuBoard(cw)}};draw()};
 async function join(id){const cs=(await get(ref(db,`rooms/${id}/set/coin`))).val();
- if(cs){const ps=(await get(ref(db,`rooms/${id}/players`))).val()||{};if(Object.entries(ps).some(([u,p])=>u!==me&&ck(p.name)===ck(name)))return alert("その名前は使われています。べつの名前にしてね")}
+ if(cs){const ps=(await get(ref(db,`rooms/${id}/players`))).val()||{};if(Object.entries(ps).some(([u,p])=>u!==me&&ck(p.name)===ck(name)))return alert(T("その名前は使われています。べつの名前にしてね"))}
  rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
  await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;LS.set("lab_room",id);
  await new Promise(r=>{onValue(ref(db,".info/serverTimeOffset"),s=>{so=s.val()||0;r()},{onlyOnce:true});setTimeout(r,2000)});
  if(cs){const cr=ref(db,`rooms/${id}/coins/${ck(name)}`),c=(await get(cr)).val();
   if(!c||c.n===undefined||(c.off&&Date.now()+so-c.off>300000))await set(cr,{n:5});else if(c.off)await set(ref(db,`rooms/${id}/coins/${ck(name)}/off`),null)}
  await runTransaction(ref(db,`rooms/${id}/colors`),cur=>{cur=cur||{};const k=ck(name);if(cur[k]!=null)return cur;const used=new Set(Object.values(cur)),free=PAL.map((_,i)=>i).filter(i=>!used.has(i)),pool=free.length?free:PAL.map((_,i)=>i);cur[k]=pool[Math.floor(Math.random()*pool.length)];return cur});
- onValue(ref(db,"rooms/"+id),s=>{ROOM=s.val();if(!ROOM){LS.del("lab_room");alert("ルームが閉じられました");return location.reload()}rebuild();watch();draw()})}
+ onValue(ref(db,"rooms/"+id),s=>{ROOM=s.val();if(!ROOM){LS.del("lab_room");alert(T("ルームが閉じられました"));return location.reload()}rebuild();watch();draw()})}
 
 /* ---- housekeeping (admin交代・離脱処理) ---- */
 const gone={};let wt=0;
@@ -90,7 +93,7 @@ function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-
  else if(MULTI())mwatch(miss,pl,ids,s);else for(const k of SK())if(s[k]&&miss(s[k])){const ok2=DBL()?(TM.tA.includes(k)?TM.tB:TM.tA):[k==="a"?"b":"a"],o=ok2.map(x=>s[x]).find(u=>u&&pl[u]);
   if(R.phase==="lobby"){if(R.admin===me||(!pl[R.admin]&&ids[0]===me))put("slots/"+k,null)}
   else if(o===me&&!["end","reveal"].includes(R.g?.stage)){put("slots/"+k,null);
-   if(R.phase==="setup"||R.phase==="bonus"){if(R.t?.st==="match"){R.t.k==="tour"?tafter(me):tforf(s[k])}else{put("phase","lobby");alert("相手が退出しました")}}
+   if(R.phase==="setup"||R.phase==="bonus"){if(R.t?.st==="match"){R.t.k==="tour"?tafter(me):tforf(s[k])}else{put("phase","lobby");alert(T("相手が退出しました"))}}
    else{const mt=tOf(me);psh("log",PN(mt)+":WIN(FORFEIT)");put("g/res",mt);put("g/stage","end")}}}
  if(wait&&!wt)wt=setTimeout(()=>{wt=0;watch()},10200)}
 /* フロアで抜けた人: 相手側の人が不戦勝にする。全員いなくなったフロアは管理者が引き分けで閉じる */
@@ -113,32 +116,32 @@ function fwatch(miss,pl){const fl=ROOM.fl||{};
 /* ---- lobby ---- */
 function lobby(){const pl=R.players||{},ids=Object.keys(pl).sort((x,y)=>pl[x].t-pl[y].t),ad=R.admin===me,s=R.slots||{},mine=isF(me),dbl=DBL(),multi=MULTI(),flm=R.set.mode==="floor",full=flm?FL.some(ffull):multi?!!(s.q&&mcnt(s)>=2):SK().every(k=>s[k]);
  $("#lid").textContent=rid;
- $("#plist").innerHTML=ids.map(u=>`<li>${nh(pl[u].name)}${u===R.admin?" 👑":""}${u===me?"(自分)":""}${R.set.coin?" 🪙"+cn(pl[u].name):""} <b>${slab(u)}</b></li>`).join("");
- $("#pst").textContent=flm?(full?`そろったフロア:${FL.filter(ffull).join("・")}(スタートで同時に始まります)`:"フロアの席を押してね。人がそろったフロアから始まります"):multi?(full?`出題者 ${P(s.q)} / 挑戦者${mcnt(s)}人`:"出題者1人と挑戦者2人以上が必要です"):dbl?(full?`${gname("tA")} vs ${gname("tB")}`:"A1・A2・B1・B2の4人がそろうとスタートできます"):full?`${P(s.a)} vs ${P(s.b)}`:(s.a||s.b)?"対戦者を待ってます…":"対戦者はまだいません";
+ $("#plist").innerHTML=ids.map(u=>`<li>${nh(pl[u].name)}${u===R.admin?" 👑":""}${u===me?T("(自分)"):""}${R.set.coin?" 🪙"+cn(pl[u].name):""} <b>${slab(u)}</b></li>`).join("");
+ $("#pst").textContent=flm?(full?T("そろったフロア:{f}(スタートで同時に始まります)",{f:FL.filter(ffull).join("・")}):T("フロアの席を押してね。人がそろったフロアから始まります")):multi?(full?T("出題者 {q} / 挑戦者{n}人",{q:P(s.q),n:mcnt(s)}):T("出題者1人と挑戦者2人以上が必要です")):dbl?(full?`${gname("tA")} vs ${gname("tB")}`:T("A1・A2・B1・B2の4人がそろうとスタートできます")):full?`${P(s.a)} vs ${P(s.b)}`:(s.a||s.b)?T("対戦者を待ってます…"):T("対戦者はまだいません");
  $("#bp").hidden=mine||!!full;$("#bx").hidden=!mine;
  $("#sr").hidden=dbl||multi||flm;$("#flr").hidden=!flm;if(flm)flobby(ad);$("#dbl").hidden=!dbl;$("#mul").hidden=!multi;$("#tw").hidden=!multi;
  $("#m1").classList.toggle("on",!dbl&&!multi&&!flm);$("#m4").classList.toggle("on",flm);$("#m2").classList.toggle("on",dbl);$("#m3").classList.toggle("on",multi);$("#m3").disabled=ids.length<3&&!multi;
  if($("#tl").value!=(R.set.turns||15))$("#tl").value=R.set.turns||15;
- if(multi){$("#mls").textContent=`出題者:${s.q?P(s.q):"-"} / 挑戦者(${mcnt(s)}人):${MC.filter(k=>s[k]).map(k=>P(s[k])).join("、")||"-"}`;$("#mq").hidden=mine||!!s.q;$("#mj").hidden=mine||mcnt(s)>=7;$("#mx").hidden=!mine}
+ if(multi){$("#mls").textContent=T("出題者:{q} / 挑戦者({n}人):{c}",{q:s.q?P(s.q):"-",n:mcnt(s),c:MC.filter(k=>s[k]).map(k=>P(s[k])).join(T("、"))||"-"});$("#mq").hidden=mine||!!s.q;$("#mj").hidden=mine||mcnt(s)>=7;$("#mx").hidden=!mine}
  if(dbl)["a","a2","b","b2"].forEach(k=>{$("#n_"+k).textContent=s[k]?P(s[k]):"";$("#d_"+k).classList.toggle("on",s[k]===me)});
  $("#adm").hidden=!ad;$("#st").disabled=!full;
  {const tt=R.set.tt||"",part=ids.filter(u=>!R.obs?.[u]);$("#tt").value=tt;$("#cb").disabled=tt==="tour";$("#tlob").hidden=!tt;$("#md").hidden=!!tt;$("#pst").hidden=!!tt;
   $("#parw").hidden=!(ad&&tt&&tt!=="tour"||ad&&tt==="tour");$("#par").checked=PAR();
   if(tt){["sr","dbl","mul","tw","st","flr"].forEach(x=>$("#"+x).hidden=true);$("#tw").hidden=tt!=="off";
-   $("#tpl").innerHTML=ids.map(u=>`<div>${nh(pl[u].name)} ${R.obs?.[u]?"👀観戦":"✔参加"}</div>`).join("")+`<div>参加者 ${part.length}人(4人以上で開始できます)</div>`;
-   $("#tobs").textContent=R.obs?.[me]?"参加にする":"観戦にする";$("#tgo").hidden=!ad;$("#tgo").disabled=part.length<4;tcfgSync(tt,ad)}
+   $("#tpl").innerHTML=ids.map(u=>`<div>${nh(pl[u].name)} ${R.obs?.[u]?T("👀観戦"):T("✔参加")}</div>`).join("")+`<div>${T("参加者 {n}人(4人以上で開始できます)",{n:part.length})}</div>`;
+   $("#tobs").textContent=R.obs?.[me]?T("参加にする"):T("観戦にする");$("#tgo").hidden=!ad;$("#tgo").disabled=part.length<4;tcfgSync(tt,ad)}
   else{$("#st").hidden=false;$("#tcfg").hidden=true}}
  if($("#wn").value!=R.set.walls)$("#wn").value=R.set.walls;$("#sp").checked=!!R.set.spec;$("#cb").checked=!!R.set.coin;$("#sp").disabled=!!R.set.coin;$("#bw").disabled=!R.set.coin||MULTI();$("#bw").checked=!!R.set.bonus;
- $("#aset").textContent=ad?"":`${flm?"フロア対戦":dbl?"ダブルス":multi?"マルチ":"シングル"} / 壁${R.set.walls}枚${multi?` / 周の上限 ${R.set.turns||15}`:""} / 観戦者の壁表示：${R.set.spec?"あり":"なし"} / コインバトル：${R.set.coin?"オン":"オフ"}${R.set.coin?` / ボーナスウォール：${R.set.bonus?"オン":"オフ"}`:""}`}
+ $("#aset").textContent=ad?"":`${T(flm?"フロア対戦":dbl?"ダブルス":multi?"マルチ":"シングル")} / ${T("壁{n}枚",{n:R.set.walls})}${multi?` / ${T("周の上限 {n}",{n:R.set.turns||15})}`:""} / ${T("観戦者の壁表示：")}${T(R.set.spec?"あり":"なし")} / ${T("コインバトル：")}${T(R.set.coin?"オン":"オフ")}${R.set.coin?` / ${T("ボーナスウォール：")}${R.set.bonus?T("オン"):T("オフ")}`:""}`}
 $("#bp").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me||s.b===me)return s;if(!s.a)s.a=me;else if(!s.b)s.b=me;else return;return s});
 $("#bx").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s.a===me)delete s.a;if(s.b===me)delete s.b;return s});
 ["a","a2","b","b2"].forEach(k=>$("#d_"+k).onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};if(s[k]&&s[k]!==me)return;const had=s[k]===me;for(const x in s)if(s[x]===me)delete s[x];if(!had)s[k]=me;return s}));
-const setMode=async x=>{if((R.set.mode||"single")===x)return;if(x==="multi"&&Object.keys(R.players||{}).length<3)return alert("マルチは3人以上そろってから選べます");await put("slots",null);await put("fs",null);await put("set/mode",x)};
+const setMode=async x=>{if((R.set.mode||"single")===x)return;if(x==="multi"&&Object.keys(R.players||{}).length<3)return alert(T("マルチは3人以上そろってから選べます"));await put("slots",null);await put("fs",null);await put("set/mode",x)};
 $("#m1").onclick=()=>setMode("single");$("#m2").onclick=()=>setMode("double");$("#m3").onclick=()=>setMode("multi");$("#m4").onclick=()=>setMode("floor");
 /* ロビーのフロアの席(A〜D)。ホストはフロアごとにシングル/ダブルスを選ぶ */
 function flobby(ad){const pl=R.players||{};
  $("#flr").innerHTML=FL.map(F=>{const m=fmode(F),s=R.fs?.[F]||{},ok=ffull(F);
-  return `<div class="fl${ok?" full":""}"><div class="flh"><b>${F}フロア${ok?" ✔":""}</b>${ad?`<button data-f="${F}" data-fm="single" class="${m==="single"?"on":""}">シングル</button><button data-f="${F}" data-fm="double" class="${m==="double"?"on":""}">ダブルス</button>`:`<span>${m==="double"?"ダブルス":"シングル"}</span>`}</div>
+  return `<div class="fl${ok?" full":""}"><div class="flh"><b>${T("{f}フロア",{f:F})}${ok?" ✔":""}</b>${ad?`<button data-f="${F}" data-fm="single" class="${m==="single"?"on":""}">${T("シングル")}</button><button data-f="${F}" data-fm="double" class="${m==="double"?"on":""}">${T("ダブルス")}</button>`:`<span>${m==="double"?T("ダブルス"):T("シングル")}</span>`}</div>
 <div class="fls">${fkeys(m).map(k=>`<div class="fseat"><button data-f="${F}" data-k="${k}" class="${s[k]===me?"on":""}">${flab(m,k)}</button><span>${s[k]&&pl[s[k]]?nh(pl[s[k]].name):""}</span></div>`).join("")}</div></div>`}).join("")}
 $("#flr").onclick=async e=>{const b=e.target.closest("button");if(!b)return;const F=b.dataset.f;
  if(b.dataset.fm){if(R.admin!==me||fmode(F)===b.dataset.fm)return;await put("fs/"+F,null);await put("set/fm/"+F,b.dataset.fm);return}
@@ -150,7 +153,7 @@ async function fstart(){const fl={},pl=R.players||{};
   const o={mode:m,phase:"setup",slots:s,nm};
   if(m==="double"){o.tb={};for(const[t,mm]of[["tA",[s.a,s.a2]],["tB",[s.b,s.b2]]]){const sh=[...mm].sort(()=>Math.random()-.5);o.tb[t]={m:mm,s:sh[0],g:sh[1],f:mm[Math.random()<.5?0:1]}}}
   fl[F]=o}
- if(!Object.keys(fl).length)return alert("人がそろったフロアがありません");
+ if(!Object.keys(fl).length)return alert(T("人がそろったフロアがありません"));
  for(const k of["boards","g","log","bets","prog","bonus","bq","bt","bgo","tb"])await put(k,null);
  await rput("fl",fl);await rput("phase","floor")}
 $("#tl").onchange=e=>put("set/turns",+e.target.value);
@@ -160,15 +163,15 @@ $("#mx").onclick=()=>runTransaction(ref(db,`rooms/${rid}/slots`),s=>{s=s||{};for
 $("#wn").onchange=e=>put("set/walls",+e.target.value);
 $("#sp").onchange=e=>put("set/spec",e.target.checked);
 $("#cb").onchange=async e=>{const on=e.target.checked,pl=R.players||{};
- if(on){const ks=Object.values(pl).map(p=>ck(p.name));if(new Set(ks).size<ks.length){alert("同じ名前の人がいるので、コインバトルは始められません");e.target.checked=false;return}
+ if(on){const ks=Object.values(pl).map(p=>ck(p.name));if(new Set(ks).size<ks.length){alert(T("同じ名前の人がいるので、コインバトルは始められません"));e.target.checked=false;return}
   for(const u in pl)await put("coins/"+ck(pl[u].name),{n:5});await put("set/spec",true);await put("set/coin",true)}
- else{if(!confirm("コインが消えますが本当にやめますか？")){e.target.checked=true;return}await put("coins",null);await put("set/bonus",false);await put("set/coin",false)}};
+ else{if(!confirm(T("コインが消えますが本当にやめますか？"))){e.target.checked=true;return}await put("coins",null);await put("set/bonus",false);await put("set/coin",false)}};
 $("#bw").onchange=e=>put("set/bonus",e.target.checked);
 $("#tt").onchange=async e=>{const v=e.target.value;await put("set/tn",null);await put("set/tt",v)};
 $("#tnn").onchange=e=>put("set/tn",+e.target.value);
 $("#tobs").onclick=()=>put("obs/"+me,R.obs?.[me]?null:1);
 $("#par").onchange=e=>put("set/par",e.target.checked);
-$("#tgo").onclick=async()=>{const pl=R.players||{},part=Object.keys(pl).filter(u=>!R.obs?.[u]);if(part.length<4)return alert("参加者が4人以上必要です");
+$("#tgo").onclick=async()=>{const pl=R.players||{},part=Object.keys(pl).filter(u=>!R.obs?.[u]);if(part.length<4)return alert(T("参加者が4人以上必要です"));
  const pn={};part.forEach(u=>pn[u]=pl[u].name);
  const tt=R.set.tt;if(!tt)return;if(tt==="tour"){await put("set/coin",false);await put("set/bonus",false);const t=tbuild(part,pn);if(PAR())t.batch=tnextKeys(t);await put("t",t)}else await put("t",tevent(tt,part,pn));await put("phase","tour")};
 $("#st").onclick=async()=>{if(R.set.mode==="floor")return fstart();await put("boards",null);await put("g",null);await put("log",null);await put("bets",null);await put("prog",null);await put("bonus",null);await put("bq",null);await put("bt",null);await put("bgo",null);await put("tb",null);
@@ -209,7 +212,7 @@ function setup(){const F=isF(me),dbl=DBL(),t=tOf(me),cnt=R.set.walls,tb=R.tb?.[t
  done=dbl?(!!R.boards?.[t]?.ok||!!tb.rd?.[me]):!!R.boards?.[me]?.ok,W=F&&!done&&(!MULTI()||me===R.slots?.q);
  $("#sed").hidden=!(W&&!dbl);$("#ded").hidden=!(W&&dbl);
  if(W&&dbl)dedit(t);
- else $("#sinfo").textContent=W?`S・G・壁${cnt}枚を決めてね(壁 ${E.W.length}/${cnt})`:F?(MULTI()?"出題者が盤面を作っています…":"相手の準備を待っています…"):"対戦者が盤面を作っています…";
+ else $("#sinfo").textContent=W?T("S・G・壁{n}枚を決めてね(壁 {a}/{b})",{n:cnt,a:E.W.length,b:cnt}):F?(MULTI()?T("出題者が盤面を作っています…"):T("相手の準備を待っています…")):T("対戦者が盤面を作っています…");
  ["S","G","W"].forEach(t=>$("#t"+t).classList.toggle("on",tool===t));
  if(W&&!dbl)bd($("#sb"),{S:E.S,G:E.G,w:E.W},{all:1,
   tap:c=>{if(tool==="S"){E.S=c;if(E.G===c)E.G=""}else if(tool==="G"){E.G=c;if(E.S===c)E.S=""}else return;pushProg();draw()},
@@ -225,9 +228,9 @@ function dedit(t){const tb=R.tb?.[t]||{},cnt=R.set.walls,w=tb.w||[],S=tb.S||"",G
  if(S&&S===G&&me===tb.g){put(`tb/${t}/G`,null);return}
  const canTap=!both&&!myDone,canEdge=both&&n<cnt&&me===placer;
  let msg="";
- if(!both)msg=myDone?`決定ずみ!相手が${role==="S"?"ゴール":"スタート"}を決めるまで待ってね`:`あなたは${role==="S"?"スタート(S)":"ゴール(G)"}担当です。マスをタップして「決定」`;
- else if(!all)msg=me===placer?`あなたの番です(壁 ${n}/${cnt})。置きたい場所をタップして「決定」`:`${P(placer)}さんが壁を置いています(壁 ${n}/${cnt})`;
- else msg="壁が全部置かれました。「準備完了」を押してね";
+ if(!both)msg=myDone?T("決定ずみ!相手が{x}を決めるまで待ってね",{x:role==="S"?T("ゴール"):T("スタート")}):T("あなたは{x}担当です。マスをタップして「決定」",{x:role==="S"?T("スタート(S)"):T("ゴール(G)")});
+ else if(!all)msg=me===placer?T("あなたの番です(壁 {n}/{c})。置きたい場所をタップして「決定」",{n,c:cnt}):T("{p}が壁を置いています(壁 {n}/{c})",{p:SAN(P(placer)),n,c:cnt});
+ else msg=T("壁が全部置かれました。「準備完了」を押してね");
  $("#sinfo").textContent=msg;
  if(DS&&(DS.includes(",")?!canTap:!canEdge))DS="";
  $("#dok").hidden=!(canTap||canEdge);$("#drd").hidden=!all;
@@ -235,34 +238,34 @@ function dedit(t){const tb=R.tb?.[t]||{},cnt=R.set.walls,w=tb.w||[],S=tb.S||"",G
  bd($("#db"),{S,G,w:ed?[...w,DS]:w},{all:1,hit:ed?[DS]:[],pos:DS&&DS.includes(",")?DS:undefined,col:"#8e44ad",
   tap:canTap?c=>{DS=c;draw()}:0,
   edge:canEdge?k=>{if(!w.includes(k)){DS=k;draw()}}:0})}
-$("#dok").onclick=async()=>{const t=tOf(me),tb=R.tb?.[t]||{},w=tb.w||[];if(!DS)return alert("先にマスや壁をタップしてね");
- if(DS.includes(",")){const isS=me===tb.s;if(DS===(isS?tb.G:tb.S))return alert("同じ場所は選べません");await put(`tb/${t}/${isS?"S":"G"}`,DS)}
- else{if(!reach(new Set([...w,DS]),tb.S,tb.G))return alert("ゴールへの道がなくなるので、そこには置けません");await put(`tb/${t}/w`,[...w,DS])}
+$("#dok").onclick=async()=>{const t=tOf(me),tb=R.tb?.[t]||{},w=tb.w||[];if(!DS)return alert(T("先にマスや壁をタップしてね"));
+ if(DS.includes(",")){const isS=me===tb.s;if(DS===(isS?tb.G:tb.S))return alert(T("同じ場所は選べません"));await put(`tb/${t}/${isS?"S":"G"}`,DS)}
+ else{if(!reach(new Set([...w,DS]),tb.S,tb.G))return alert(T("ゴールへの道がなくなるので、そこには置けません"));await put(`tb/${t}/w`,[...w,DS])}
  DS="";draw()};
 $("#drd").onclick=()=>put(`tb/${tOf(me)}/rd/${me}`,1);
 function wait(F){const u=gids(),spec=R.set.spec,cnt=R.set.walls,coin=!!R.set.coin,bets=R.bets||{},my=bets[me]?.c;
- $("#stat").innerHTML=u.map(x=>`<div>${R.boards?.[x]?.ok?"✓ "+gnh(x)+"さん"+(MULTI()?"(出題者)":"")+"準備完了":gnh(x)+"さん"+(MULTI()?"(出題者)":"")+"作成中"}</div>`).join("");
+ $("#stat").innerHTML=u.map(x=>`<div>${R.boards?.[x]?.ok?"✓ "+T("{x}準備完了",{x:SAN(gnh(x))+(MULTI()?T("(出題者)"):"")}):T("{x}作成中",{x:SAN(gnh(x))+(MULTI()?T("(出題者)"):"")})}</div>`).join("");
  $("#vw").hidden=F;
  if(!F){betView=Math.min(betView,u.length-1);const x=u[betView],B=R.boards?.[x]?.ok?R.boards[x]:((DBL()?R.tb:R.prog)?.[x]||{}),n=(B.ok||DBL())?(B.w||[]).length:(B.n||0);
-  $("#v0").textContent=gname(u[0])+"さん";$("#v1").textContent=u[1]?gname(u[1])+"さん":"";$("#v0").hidden=$("#v1").hidden=u.length<2;
+  $("#v0").textContent=SAN(gname(u[0]));$("#v1").textContent=u[1]?SAN(gname(u[1])):"";$("#v0").hidden=$("#v1").hidden=u.length<2;
   $("#v0").classList.toggle("on",betView===0);$("#v1").classList.toggle("on",betView===1);
   bd($("#vb"),{S:B.S,G:B.G,w:spec?(B.w||[]):[]},{all:1});
-  $("#vc").textContent=`${gname(x)}さんの壁 ${n}/${cnt}`+(spec?"":"(壁の位置はひみつ)")}
+  $("#vc").textContent=T("{x}の壁 {n}/{c}",{x:SAN(gname(x)),n,c:cnt})+(spec?"":T("(壁の位置はひみつ)"))}
  const canBet=coin&&!F&&!MULTI();
  $("#bet").hidden=!canBet;$("#rkw").hidden=!coin;
  if(canBet){const mc=cn(name),k=x=>Object.values(bets).filter(b=>b.c===x).length;
-  $("#mc").textContent=`🪙 あなたのコイン:${mc}枚`+(mc<1?"(0枚なので賭けられません)":"(1枚賭けます)");
-  $("#bo").innerHTML=[[u[0],blab(u[0])||gname(u[0])+"さん"],[u[1],blab(u[1])||gname(u[1])+"さん"],["draw","引き分け"]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${k(c)}票</button>`).join("")}
+  $("#mc").textContent=T("🪙 あなたのコイン:{n}枚",{n:mc})+(mc<1?T("(0枚なので賭けられません)"):T("(1枚賭けます)"));
+  $("#bo").innerHTML=[[u[0],blab(u[0])||SAN(gname(u[0]))],[u[1],blab(u[1])||SAN(gname(u[1]))],["draw",T("引き分け")]].map(([c,t])=>`<button data-c="${esc(c)}" class="${my===c?"on":""}"${mc<1?" disabled":""}>${esc(t)}<br>${T("{n}票",{n:k(c)})}</button>`).join("")}
  if(coin)$("#rk").innerHTML=rankHtml();
- $("#bhint").textContent=(FLM()?"賭けられるのは1フロアだけです。":"")+(R.set.bonus?"全員の壁ができるまで変えられます(誰に賭けたかは見えません)":"ゲームが始まるまで変えられます(誰に賭けたかは見えません)")}
+ $("#bhint").textContent=(FLM()?T("賭けられるのは1フロアだけです。"):"")+(R.set.bonus?T("全員の壁ができるまで変えられます(誰に賭けたかは見えません)"):T("ゲームが始まるまで変えられます(誰に賭けたかは見えません)"))}
 $("#v0").onclick=()=>{betView=0;draw()};$("#v1").onclick=()=>{betView=1;draw()};
 $("#bo").onclick=e=>{const b=e.target.closest("button");if(!(b&&R.phase==="setup"&&R.set.coin&&!local&&!isF(me)&&cn(name)>=1))return;
  if(FLM()){if(actFl())return;const fl=ROOM.fl||{},lk=Object.keys(fl).find(F=>F!==VF&&fl[F].bets?.[me]&&fl[F].phase!=="setup");
-  if(lk)return alert(`${lk}フロアに賭けています(賭けられるのは1フロアだけ)`);for(const F in fl)if(F!==VF&&fl[F].bets?.[me])rput(`fl/${F}/bets/${me}`,null)}
+  if(lk)return alert(T("{f}フロアに賭けています(賭けられるのは1フロアだけ)",{f:lk}));for(const F in fl)if(F!==VF&&fl[F].bets?.[me])rput(`fl/${F}/bets/${me}`,null)}
  put("bets/"+me,{c:b.dataset.c,n:name})};
 ["S","G","W"].forEach(t=>$("#t"+t).onclick=()=>{tool=t;draw()});
 $("#rd").onclick=()=>{if(!E.S||!E.G||E.S===E.G||E.W.length!==R.set.walls||!reach(new Set(E.W),E.S,E.G))
- return alert("S・G・壁の数を確認してね。SからGへ必ず行ける道が必要です");put(`boards/${me}`,{S:E.S,G:E.G,w:E.W,ok:1})};
+ return alert(T("S・G・壁の数を確認してね。SからGへ必ず行ける道が必要です"));put(`boards/${me}`,{S:E.S,G:E.G,w:E.W,ok:1})};
 async function startGame(){if(MULTI())return mstartGame();const ids=gids(),[a,b]=[...ids].sort(()=>Math.random()-.5),B=R.boards,d=DBL(),mm=d?{tA:mem("tA"),tB:mem("tB")}:{[a]:[a],[b]:[b]},names={};
  if(d)["tA","tB"].forEach(t=>{names[t]=mem(t).map(P).join("&");mem(t).forEach(u=>names[u]=P(u))});else{names[a]=P(a);names[b]=P(b)}
  await put("g",{order:[a,b],turn:0,stage:"start",names,mem:mm,f:{[a]:Math.random()<.5?0:1,[b]:Math.random()<.5?0:1},cnt:{[a]:0,[b]:0},pos:{[a]:B[b].S,[b]:B[a].S},path:{[a]:[B[b].S],[b]:[B[a].S]},ev:{id:Date.now(),k:""}});
@@ -287,24 +290,24 @@ async function tmatch(a,b){for(const k of["boards","g","log","bets","prog","bonu
  await put("set/mode","single");await put("slots",{a,b});await put("t/st","match");await put("phase","setup")}
 async function tafter(w){const t=R.t;if(tbusy||!t||t.st!=="match"||!t.cur)return;tbusy=1;
  try{await put("slots",null);await trecord(t.cur,w);await put("phase","tour")}finally{tbusy=0}}
-const tname=(t,r)=>r===t.rr-1?"決勝":r===t.rr-2?"準決勝":(r+1)+"回戦";
+const tname=(t,r)=>r===t.rr-1?T("決勝"):r===t.rr-2?T("準決勝"):T("{n}回戦",{n:r+1});
 function tdisp(){const t=R.t;if(!t)return "";if(t.k!=="tour")return tdisp2(t);let h="";
- const who=u=>u?(u==="bye"?"不戦勝":nh(tn(t,u))+"さん"):"?";
+ const who=u=>u?(u==="bye"?T("不戦勝"):SAN(nh(tn(t,u)))):"?";
  for(let r=0;r<t.rr;r++){h+=`<div class="tr">${tname(t,r)}</div>`;
   for(let j=0;j<t.Pw/2**(r+1);j++){const k=r+"-"+j,mm=t.m[k]||{},cur=(t.batch||[t.cur]).includes(k)&&t.st!=="done";
-   h+=`<div class="${cur?"tcur":""}">${cur?"▶ ":""}${mm.b==="bye"?who(mm.a)+"(不戦勝)":who(mm.a)+" VS "+who(mm.b)}${mm.w&&mm.b!=="bye"?" → 🏆"+nh(tn(t,mm.w)):""}</div>`}}
+   h+=`<div class="${cur?"tcur":""}">${cur?"▶ ":""}${mm.b==="bye"?who(mm.a)+T("(不戦勝)"):who(mm.a)+" VS "+who(mm.b)}${mm.w&&mm.b!=="bye"?" → 🏆"+nh(tn(t,mm.w)):""}</div>`}}
  return h}
 function tour(){const t=R.t;if(!t)return;if(t.k!=="tour")return tour2(t);const adm=R.admin===me,mt=t.m?.[t.cur]||{},bt=t.batch||[];
- $("#tmsg2").innerHTML=t.st==="done"?`🏆 優勝 ${nh(tn(t,t.champ))}さん!`:bt.length>1?`次の試合(${bt.length}試合を同時に)<br>`+bt.map((k,i)=>{const m=t.m[k]||{};return `${FL[i]}フロア ${tname(t,+k.split("-")[0])}:${nh(tn(t,m.a))}さん VS ${nh(tn(t,m.b))}さん`}).join("<br>"):`次の試合(${tname(t,+String(t.cur).split("-")[0])})<br>${nh(tn(t,mt.a))}さん VS ${nh(tn(t,mt.b))}さん`;
+ $("#tmsg2").innerHTML=t.st==="done"?T("🏆 優勝 {n}!",{n:SAN(nh(tn(t,t.champ)))}):bt.length>1?T("次の試合({n}試合を同時に)",{n:bt.length})+"<br>"+bt.map((k,i)=>{const m=t.m[k]||{};return `${T("{f}フロア",{f:FL[i]})} ${tname(t,+k.split("-")[0])}: ${SAN(nh(tn(t,m.a)))} VS ${SAN(nh(tn(t,m.b)))}`}).join("<br>"):T("次の試合({r})",{r:tname(t,+String(t.cur).split("-")[0])})+`<br>${SAN(nh(tn(t,mt.a)))} VS ${SAN(nh(tn(t,mt.b)))}`;
  $("#tbrd").innerHTML=tdisp();
  $("#tstart").hidden=!(adm&&t.st==="announce");$("#tend").hidden=!(adm&&t.st==="done");
- $("#twait").textContent=adm?"":(t.st==="done"?"管理者が大会を終了するのを待っています…":"管理者が「開始」を押すのを待っています…")}
+ $("#twait").textContent=adm?"":(t.st==="done"?T("管理者が大会を終了するのを待っています…"):T("管理者が「開始」を押すのを待っています…"))}
 function tctl(rev,g){const t=R.t,on=!!t&&rev&&R.admin===me&&t.st==="match";$("#tpick").hidden=!on;if(!on)return;$("#tfl").innerHTML="";$("#tnx").disabled=false;
- if(t.k!=="tour"){$("#tmsg").textContent=`第${t.i+1}/${t.n}試合が終わりました`;$("#tnx").hidden=false;$("#tw1").hidden=$("#tw2").hidden=$("#twr").hidden=true;return}
+ if(t.k!=="tour"){$("#tmsg").textContent=T("第{i}/{n}試合が終わりました",{i:t.i+1,n:t.n});$("#tnx").hidden=false;$("#tw1").hidden=$("#tw2").hidden=$("#twr").hidden=true;return}
  const mt=t.m?.[t.cur]||{},dr=g.res==="draw";
- $("#tmsg").textContent=dr?"引き分け!勝者を選んでください":`${PN(g.res)}さんの勝ち`;
+ $("#tmsg").textContent=dr?T("引き分け!勝者を選んでください"):T("{n}の勝ち",{n:SAN(PN(g.res))});
  $("#tnx").hidden=dr;$("#tw1").hidden=$("#tw2").hidden=$("#twr").hidden=!dr;
- $("#tw1").textContent=tn(t,mt.a)+"さんの勝ち";$("#tw2").textContent=tn(t,mt.b)+"さんの勝ち"}
+ $("#tw1").textContent=T("{n}の勝ち",{n:SAN(tn(t,mt.a))});$("#tw2").textContent=T("{n}の勝ち",{n:SAN(tn(t,mt.b))})}
 $("#tstart").onclick=async()=>{if(R.t.k!=="tour")return tstart2();if(R.t.batch?.length)return tstartF();const t=R.t,mt=t.m[t.cur],pl=R.players||{},ha=!!pl[mt.a],hb=!!pl[mt.b];
  if(!ha||!hb){await trecord(t.cur,ha?mt.a:hb?mt.b:[mt.a,mt.b][Math.floor(Math.random()*2)]);return}
  await tmatch(mt.a,mt.b)};
@@ -322,15 +325,15 @@ function ftctl(){const t=R.t,fl=ROOM.fl||{},ks=Object.keys(fl).sort(),on=!!t&&t.
  const nm=(F,u)=>fl[F].g?.names?.[u]||fl[F].nm?.[u]||ROOM.players?.[u]?.name||"?";let need=0,h="";
  ks.forEach(F=>{const g=fl[F].g||{};
   if(g.res==="draw"){if(t.k==="tour"){const m=t.m[fl[F].mk];if(!fpick[F])need++;
-    h+=`<div>${F}フロア 引き分け → 勝者:${fpick[F]?esc(nm(F,fpick[F]))+"さん":"選んでください"}</div><div class="row"><button data-f="${F}" data-w="${m.a}">${esc(nm(F,m.a))}さん</button><button data-f="${F}" data-w="${m.b}">${esc(nm(F,m.b))}さん</button><button data-f="${F}" data-w="rnd">ランダム</button></div>`}
-   else h+=`<div>${F}フロア 引き分け</div>`}
-  else h+=`<div>${F}フロア ${esc(g.names?.[g.res]||"?")}さんの勝ち</div>`});
- $("#tmsg").textContent=t.k==="tour"?"全フロアの試合が終わりました":`第${t.i+1}〜${t.i+ks.length}/${t.n}試合が終わりました`;
+    h+=`<div>${T("{f}フロア 引き分け → 勝者:{w}",{f:F,w:fpick[F]?SAN(esc(nm(F,fpick[F]))):T("選んでください")})}</div><div class="row"><button data-f="${F}" data-w="${m.a}">${SAN(esc(nm(F,m.a)))}</button><button data-f="${F}" data-w="${m.b}">${SAN(esc(nm(F,m.b)))}</button><button data-f="${F}" data-w="rnd">${T("ランダム")}</button></div>`}
+   else h+=`<div>${T("{f}フロア 引き分け",{f:F})}</div>`}
+  else h+=`<div>${T("{f}フロア {n}の勝ち",{f:F,n:SAN(esc(g.names?.[g.res]||"?"))})}</div>`});
+ $("#tmsg").textContent=t.k==="tour"?T("全フロアの試合が終わりました"):T("第{i}〜{j}/{n}試合が終わりました",{i:t.i+1,j:t.i+ks.length,n:t.n});
  $("#tfl").innerHTML=h;$("#tnx").hidden=false;$("#tnx").disabled=need>0}
 $("#tfl").onclick=e=>{const b=e.target.closest("button");if(!b)return;const F=b.dataset.f,m=R.t.m[ROOM.fl[F].mk];fpick[F]=b.dataset.w==="rnd"?rnd([m.a,m.b]):b.dataset.w;draw()};
 async function fnext(){const t0=R.t,fl=ROOM.fl||{},ks=Object.keys(fl).sort();if(tbusy||!t0||t0.st!=="match")return;tbusy=1;
  try{let t;
-  if(t0.k==="tour"){t=JSON.parse(JSON.stringify(t0));for(const F of ks){const g=fl[F].g||{},w=g.res==="draw"?fpick[F]:g.res;if(!w)return alert("引き分けの勝者を選んでください");t.m[fl[F].mk].w=w;tfill(t)}tnextB(t)}
+  if(t0.k==="tour"){t=JSON.parse(JSON.stringify(t0));for(const F of ks){const g=fl[F].g||{},w=g.res==="draw"?fpick[F]:g.res;if(!w)return alert(T("引き分けの勝者を選んでください"));t.m[fl[F].mk].w=w;tfill(t)}tnextB(t)}
   else{t=tcl();for(const F of ks)tapply(t,fl[F].lu,tres(fl[F].lu,fl[F].g||{}));t.i+=ks.length-1;tstep(t)}
   fpick={};await rput("fl",null);await put("t",t);await rput("phase","tour")}finally{tbusy=0}}
 $("#tend").onclick=async()=>{await put("set/mode","single");await put("t",null);await put("obs",null);await put("set/tt","");await put("slots",null);await put("phase","lobby")};
@@ -342,13 +345,13 @@ $("#tb").onclick=()=>{$("#tpc").innerHTML=tdisp();$("#tp").hidden=false};
 $("#tpx").onclick=()=>{$("#tp").hidden=true};
 
 /* ---- event (league / official) ---- */
-const FN={single:"シングル",double:"ダブルス",multi:"マルチ"},pk=(a,b)=>[a,b].sort().join("|"),rnd=a=>a[Math.floor(Math.random()*a.length)],shuf=a=>[...a].sort(()=>Math.random()-.5);
+const FN={single:T("シングル"),double:T("ダブルス"),multi:T("マルチ")},pk=(a,b)=>[a,b].sort().join("|"),rnd=a=>a[Math.floor(Math.random()*a.length)],shuf=a=>[...a].sort(()=>Math.random()-.5);
 let lastTT=null;
 function tcfgSync(tt,ad){$("#tcfg").hidden=!(ad&&tt&&tt!=="tour");
  if(tt!==lastTT){lastTT=tt;const s=$("#tnn");s.innerHTML="";const add=(v,t)=>s.add(new Option(t,v));
-  if(tt==="ls"){add(0,"総当たり(全部)");for(let i=1;i<=28;i++)add(i,i+"試合")}
-  else if(tt==="ld"){for(let i=3;i<=20;i++)add(i,i+"試合")}
-  else if(tt==="off"){for(let i=3;i<=10;i++)add(i,i+"試合")}}
+  if(tt==="ls"){add(0,T("総当たり(全部)"));for(let i=1;i<=28;i++)add(i,T("{n}試合",{n:i}))}
+  else if(tt==="ld"){for(let i=3;i<=20;i++)add(i,T("{n}試合",{n:i}))}
+  else if(tt==="off"){for(let i=3;i<=10;i++)add(i,T("{n}試合",{n:i}))}}
  if(tt&&tt!=="tour")$("#tnn").value=R.set.tn??(tt==="ls"?0:tt==="ld"?6:3)}
 const tcl=()=>{const t=JSON.parse(JSON.stringify(R.t));["rec","apps","qc","pt","pl"].forEach(k=>t[k]=t[k]||{});t.hist=t.hist||[];return t};
 const tpres=t=>Object.keys(t.pn).filter(u=>R.players?.[u]);
@@ -373,26 +376,26 @@ function tevent(tt,part,pn){const N=part.length,dv=tt==="ls"?0:tt==="ld"?6:3,v=R
  part.forEach(u=>{t.rec[u]={w:0,l:0,d:0};t.apps[u]=0;t.qc[u]=0});
  if(tt==="off")t.st="choose";else tre(t,tt==="ls"?"single":"double");return t}
 const luIds=lu=>lu.f==="single"?lu.ps:lu.f==="double"?[...lu.tA,...lu.tB]:[lu.q,...lu.cs];
-const luHtml=(t,lu)=>{const n=u=>nh(tn(t,u))+"さん";return lu.f==="single"?n(lu.ps[0])+" VS "+n(lu.ps[1]):lu.f==="double"?"A("+lu.tA.map(n).join("、")+") VS B("+lu.tB.map(n).join("、")+")":"出題者 "+n(lu.q)+"<br>挑戦者 "+lu.cs.map(n).join("、")};
+const luHtml=(t,lu)=>{const n=u=>SAN(nh(tn(t,u)));return lu.f==="single"?n(lu.ps[0])+" VS "+n(lu.ps[1]):lu.f==="double"?"A("+lu.tA.map(n).join("、")+") VS B("+lu.tB.map(n).join(T("、"))+")":T("出題者 ")+n(lu.q)+T("<br>挑戦者 ")+lu.cs.map(n).join(T("、"))};
 function trank(t){const co=!!R.set.coin,a=Object.keys(t.pn).map(u=>{const r=t.rec?.[u]||{};return{u,n:t.pn[u],c:co?cn(t.pn[u]):0,w:r.w||0,l:r.l||0,d:r.d||0,a:t.apps?.[u]||0}});
  a.sort((x,y)=>(y.c-x.c)||(y.w-x.w)||(y.d-x.d));let rk=0;
  a.forEach((x,i)=>{const p=a[i-1];if(!p||x.c!==p.c||x.w!==p.w||x.d!==p.d)rk=i+1;x.rk=rk});return a}
-function tdisp2(t){const co=!!R.set.coin;let h=`<table class="tk"><tr><th>順位</th><th>名前</th>${co?"<th>🪙</th>":""}<th>勝-負-分</th><th>出場</th></tr>`;
+function tdisp2(t){const co=!!R.set.coin;let h=`<table class="tk"><tr><th>${T("順位")}</th><th>${T("名前")}</th>${co?"<th>🪙</th>":""}<th>${T("勝-負-分")}</th><th>${T("出場")}</th></tr>`;
  trank(t).forEach(x=>{h+=`<tr><td>${x.rk}</td><td>${nh(x.n)}</td>${co?`<td>${x.c}</td>`:""}<td>${x.w}-${x.l}-${x.d}</td><td>${x.a}</td></tr>`});h+="</table>";
  (t.hist||[]).forEach((e,i)=>{const g=k=>Object.keys(e.r||{}).filter(u=>e.r[u]===k).map(u=>nh(tn(t,u))).join("、");
-  h+=`<div>第${i+1}試合 ${FN[e.f]}:${g("w")?" ○"+g("w"):""}${g("d")?" △"+g("d"):""}${g("l")?" ●"+g("l"):""}</div>`});return h}
+  h+=`<div>${T("第{i}試合 {f}",{i:i+1,f:FN[e.f]})}:${g("w")?" ○"+g("w"):""}${g("d")?" △"+g("d"):""}${g("l")?" ●"+g("l"):""}</div>`});return h}
 function tour2(t){const adm=R.admin===me,done=t.st==="done",pr=tpres(t).length;let h;
- if(done)h="🏆 優勝 "+trank(t).filter(x=>x.rk===1).map(x=>nh(x.n)+"さん").join("、");
- else if(t.st==="choose"||!t.cur)h=`第${t.i+1}/${t.n}試合<br>形式を選んでください`;
- else if(t.batch?.length>1)h=`第${t.i+1}〜${t.i+t.batch.length}/${t.n}試合 ${FN[t.cur.f]}(同時)<br>`+t.batch.map((lu,i)=>`${FL[i]}フロア:${luHtml(t,lu)}`).join("<br>");
- else h=`第${t.i+1}/${t.n}試合 ${FN[t.cur.f]}<br>${luHtml(t,t.cur)}`;
+ if(done)h=T("🏆 優勝 ")+trank(t).filter(x=>x.rk===1).map(x=>SAN(nh(x.n))).join(T("、"));
+ else if(t.st==="choose"||!t.cur)h=T("第{i}/{n}試合<br>形式を選んでください",{i:t.i+1,n:t.n});
+ else if(t.batch?.length>1)h=T("第{i}〜{j}/{n}試合 {f}(同時)",{i:t.i+1,j:t.i+t.batch.length,n:t.n,f:FN[t.cur.f]})+"<br>"+t.batch.map((lu,i)=>`${T("{f}フロア",{f:FL[i]})}: ${luHtml(t,lu)}`).join("<br>");
+ else h=T("第{i}/{n}試合 {f}",{i:t.i+1,n:t.n,f:FN[t.cur.f]})+`<br>${luHtml(t,t.cur)}`;
  $("#tmsg2").innerHTML=h;$("#tbrd").innerHTML=tdisp2(t);
  $("#tfmt").hidden=!(adm&&t.k==="off"&&!done);[["tf1",2],["tf2",4],["tf3",3]].forEach(([id,k])=>$("#"+id).disabled=pr<k);
  $("#tstart").hidden=!(adm&&t.st==="announce"&&!!t.cur);$("#tend").hidden=!(adm&&done);
- $("#twait").textContent=adm?"":done?"管理者が大会を終了するのを待っています…":t.st==="choose"?"管理者が形式を選んでいます…":"管理者が「開始」を押すのを待っています…"}
+ $("#twait").textContent=adm?"":done?T("管理者が大会を終了するのを待っています…"):t.st==="choose"?T("管理者が形式を選んでいます…"):T("管理者が「開始」を押すのを待っています…")}
 async function tchoose(f){const t=tcl();if(t.st==="done"||t.st==="match")return;
- if(PAR()&&f!=="multi"){const b=tbatch(t,f);if(!b.length)return alert("その形式を行う人数が足りません");t.batch=b;t.cur=b[0];t.st="announce";await put("t",t);return}
- const lu=tpick(t,f);if(!lu)return alert("その形式を行う人数が足りません");t.batch=null;t.cur=lu;t.st="announce";await put("t",t)}
+ if(PAR()&&f!=="multi"){const b=tbatch(t,f);if(!b.length)return alert(T("その形式を行う人数が足りません"));t.batch=b;t.cur=b[0];t.st="announce";await put("t",t);return}
+ const lu=tpick(t,f);if(!lu)return alert(T("その形式を行う人数が足りません"));t.batch=null;t.cur=lu;t.st="announce";await put("t",t)}
 $("#tf1").onclick=()=>tchoose("single");$("#tf2").onclick=()=>tchoose("double");$("#tf3").onclick=()=>tchoose("multi");
 async function tstart2(){const t=R.t;if(!t.cur||t.st!=="announce")return;
  const bt=t.batch?.length?t.batch:[t.cur];
@@ -438,14 +441,14 @@ async function startBonus(){const sp=Object.keys(R.players||{}).filter(u=>FLM()?
 const claim=async()=>(await runTransaction(ref(db,`rooms/${rid}/${fp("bgo")}`),v=>v?undefined:1)).committed;
 const bInfo=()=>{const q=R.bq||{},pk=R.bonus||{},left=Math.ceil(((R.bt||0)-(Date.now()+so))/1000),todo=Object.keys(q).filter(u=>R.players?.[u]&&!pk[u]);return{q,pk,left,todo,sel:!isF(me)&&!!q[me]&&!pk[me]&&left>0}};
 function bTick(){const i=bInfo(),t=Math.max(0,i.left);
- $("#bmsg").textContent=`ボーナスウォールを指定して下さい(あと${t}秒)  緑の壁をタップ`;
- $("#bw1").textContent=isF(me)?`準備完了!(あと${t}秒)`:`作成中…(あと${t}秒)`;
- $("#bwho").innerHTML=i.todo.map(u=>`<div>${esc(i.q[u])}さん(観戦者)ボーナスウォール指定中…</div>`).join("");
+ $("#bmsg").textContent=T("ボーナスウォールを指定して下さい(あと{t}秒)  緑の壁をタップ",{t});
+ $("#bw1").textContent=isF(me)?T("準備完了!(あと{t}秒)",{t}):T("作成中…(あと{t}秒)",{t});
+ $("#bwho").innerHTML=i.todo.map(u=>`<div>${T("{n}(観戦者)ボーナスウォール指定中…",{n:SAN(esc(i.q[u]))})}</div>`).join("");
  if(!go2&&((isDrv()&&(i.left<=0||!i.todo.length))||(isF(me)&&i.left<=-4))){go2=1;claim().then(ok=>ok&&startGame())}}
 function pickW(o,k){if((R.boards?.[o]?.w||[]).includes(k))put("bonus/"+me,{o,k,n:name})}
 function bonus(){const[a,b]=gids(),F=isF(me),i=bInfo(),B=R.boards||{};
  $("#bsel").hidden=!i.sel;$("#bwait").hidden=i.sel;
- if(i.sel){$("#bt1").textContent=gname(a)+"さんの盤面";$("#bt2").textContent=gname(b)+"さんの盤面";
+ if(i.sel){$("#bt1").textContent=T("{n}の盤面",{n:SAN(gname(a))});$("#bt2").textContent=T("{n}の盤面",{n:SAN(gname(b))});
   bd($("#bb1"),B[a],{all:1,edge:k=>pickW(a,k)});bd($("#bb2"),B[b],{all:1,edge:k=>pickW(b,k)})}
  $("#bpl").hidden=!F;if(F)$("#brk").innerHTML=rankHtml();
  bTick()}
@@ -460,10 +463,10 @@ function mwatch(miss,pl,ids,s){const keys=SK();
   if(R.phase==="lobby"){if(R.admin===me||(!pl[R.admin]&&ids[0]===me))put("slots/"+k,null);continue}
   if(keys.map(x=>s[x]).find(x=>x&&pl[x])!==me)continue;
   const g=R.g;
-  if(R.phase==="setup"){put("slots/"+k,null);if(k==="q"||mcnt(s)-1<2){if(R.t?.st==="match")tvoid();else{put("phase","lobby");alert("参加者が退出しました")}}continue}
+  if(R.phase==="setup"){put("slots/"+k,null);if(k==="q"||mcnt(s)-1<2){if(R.t?.st==="match")tvoid();else{put("phase","lobby");alert(T("参加者が退出しました"))}}continue}
   if(R.phase==="play"&&g?.multi&&!["end","reveal"].includes(g.stage)){
    put("slots/"+k,null);
-   if(k==="q"){if(R.t?.st==="match")tvoid();else{put("phase","lobby");alert("出題者が退出したので中止しました")}continue}
+   if(k==="q"){if(R.t?.st==="match")tvoid();else{put("phase","lobby");alert(T("出題者が退出したので中止しました"))}continue}
    put("g/left/"+u,1);
    if(!g.order.some(x=>x!==u&&!g.left?.[x]&&!(g.arr||[]).includes(x))){mfinish({...g,left:{...(g.left||{}),[u]:1}});continue}
    if(g.mv===u&&g.stage==="play")mnext(u,{[u]:1})}}}
@@ -495,11 +498,11 @@ async function msettle(){const g=R.g,arr=g.arr||[],d={},nm={};
  if(o.length)await psh("log","🪙 "+o.join(", "))}
 function mplay(g){const q=g.q,B=R.boards?.[q]||{w:[]},rev=g.stage==="reveal",isQ=me===q,ch=g.order.includes(me),spec=R.set?.spec,arr=g.arr||[];
  $("#t2").hidden=$("#b2").hidden=true;$("#mst").hidden=false;$("#bs").hidden=true;$("#tpick").hidden=true;
- $("#t1").textContent=`出題者:${PN(q)}さん  第${g.rn||1}/${g.lim}周`;
+ $("#t1").textContent=T("出題者:{q}  第{r}/{l}周",{q:SAN(PN(q)),r:g.rn||1,l:g.lim});
  const pcs=g.order.map((u,i)=>({pos:g.pos?.[u],col:colOf(PN(u))||MCOL[i%7],t:(PN(u)||"?").slice(0,1)})),mine=ch&&g.stage==="play"&&g.mv===me&&!arr.includes(me);
  bd($("#b1"),B,{paths:g.order.map((u,i)=>({cells:g.path?.[u]||[],col:colOf(PN(u))||MCOL[i%7]})),hit:g.hit||[],pieces:pcs,all:rev||isQ||(!ch&&spec),
   tap:mine?c=>{if(nb(g.pos[me]).includes(c))mstep(me,c)}:0});
- $("#mst").innerHTML=(g.stage==="play"?`<b>${nh(PN(g.mv))}さんのターン</b>(残り${2-(g.st||0)}マス)<br>`:"")+g.order.map((u,i)=>`<span style="color:${colOf(PN(u))||MCOL[i%7]}">●</span>${nh(PN(u))}${arr.includes(u)?"🏁":g.left?.[u]?"✕":""}`).join("　");
+ $("#mst").innerHTML=(g.stage==="play"?`<b>${T("{n}のターン",{n:SAN(nh(PN(g.mv)))})}</b>${T("(残り{n}マス)",{n:2-(g.st||0)})}<br>`:"")+g.order.map((u,i)=>`<span style="color:${colOf(PN(u))||MCOL[i%7]}">●</span>${nh(PN(u))}${arr.includes(u)?"🏁":g.left?.[u]?"✕":""}`).join("　");
  const lgE=$("#lg"),keep=lgE.scrollTop,hold=lgHold||Date.now()-lgTouch<3000;
  lgE.innerHTML=msgs(R.log).slice(-300).map(x=>`<div${x.startsWith("💬")?' class="cm"':""}>${lgc(x)}</div>`).join("");
  lgE.classList.toggle("all",!!allLog);lgE.scrollTop=hold?keep:lgE.scrollHeight;
@@ -507,10 +510,10 @@ function mplay(g){const q=g.q,B=R.boards?.[q]||{w:[]},rev=g.stage==="reveal",isQ
  if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&!g.hl&&me===q){g.hl=1;put("g/hl",1);msettle()}
  if(g.stage==="start"&&!stT&&me===q)stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start")mstart()},2000)}
 function mOv(g){const st=g.stage,arr=g.arr||[];
- if(st==="start")return `<div class="big">出題者 ${esc(PN(g.q))}さん<br>挑戦者 ${g.order.map(u=>esc(PN(u))).join(" → ")}</div>`;
- if(st==="end"){if(!arr.length)return `<div class="huge">出題者 ${esc(PN(g.q))}さんの勝ち！！</div><div class="sm">誰もゴールできませんでした</div>`;
-  if(R.set.coin)return `<div class="big">${arr.map((u,i)=>(i+1)+"位 "+esc(PN(u))+"さん").join("<br>")}</div>`;
-  return arr.length===1?`<div class="big">${esc(PN(arr[0]))}さんの勝ち！！</div>`:`<div class="big">同着！！<br>${arr.map(u=>esc(PN(u))+"さん").join("<br>")}</div>`}
+ if(st==="start")return `<div class="big">${T("出題者 {q}<br>挑戦者 {c}",{q:SAN(esc(PN(g.q))),c:g.order.map(u=>esc(PN(u))).join(" → ")})}</div>`;
+ if(st==="end"){if(!arr.length)return `<div class="huge">${T("出題者 {q}の勝ち！！",{q:SAN(esc(PN(g.q)))})}</div><div class="sm">${T("誰もゴールできませんでした")}</div>`;
+  if(R.set.coin)return `<div class="big">${arr.map((u,i)=>T("{n}位 ",{n:i+1})+SAN(esc(PN(u)))).join("<br>")}</div>`;
+  return arr.length===1?`<div class="big">${T("{n}の勝ち！！",{n:SAN(esc(PN(arr[0])))})}</div>`:`<div class="big">${T("同着！！")}<br>${arr.map(u=>SAN(esc(PN(u)))).join("<br>")}</div>`}
  return ""}
 
 /* ---- play ---- */
@@ -535,8 +538,8 @@ function cpu(){const g=R.g;if(!local||busy||cpuT||!g||g.stage!=="play"||g.order[
   step("cpu",cpuMove(lvl,g.pos.cpu,new Set(g.hit?.cpu||[]),new Set(g.path.cpu),R.boards[me].G))},700)}
 function play(){const g=R.g;if(g.multi)return mplay(g);$("#t2").hidden=$("#b2").hidden=false;$("#mst").hidden=true;const[a,b]=g.order,mt=Object.keys(g.mem||{}).find(t=>g.mem[t].includes(me)),F=!!mt,rev=g.stage==="reveal",B=R.boards||{},spec=R.set?.spec;
  const[d1,s1,d2,s2]=F?[a===mt?b:a,mt,mt,a===mt?b:a]:[a,b,b,a];
- $("#t1").textContent=F?"Crack a Grid(相手の盤面)":PN(d1)+"の盤面";
- $("#t2").textContent=F?"Design a Grid(自分の盤面)":PN(d2)+"の盤面";
+ $("#t1").textContent=F?T("Crack a Grid(相手の盤面)"):T("{n}の盤面",{n:PN(d1)});
+ $("#t2").textContent=F?T("Design a Grid(自分の盤面)"):T("{n}の盤面",{n:PN(d2)});
  bd($("#b1"),B[d1],{path:g.path?.[s1],pcol:pcol(g,s1),pos:g.pos?.[s1],hit:g.hit?.[s1],all:rev||(!F&&spec),col:pcol(g,s1)||"#2874a6",
   tap:F?c=>{if(g.stage==="play"&&g.mv===me&&nb(g.pos[mt]).includes(c))step(mt,c)}:0});
  bd($("#b2"),B[d2],{path:g.path?.[s2],pcol:pcol(g,s2),pos:g.pos?.[s2],hit:g.hit?.[s2],all:F||rev||spec,col:pcol(g,s2)||"#c0392b"});
@@ -545,11 +548,11 @@ function play(){const g=R.g;if(g.multi)return mplay(g);$("#t2").hidden=$("#b2").
  lgE.classList.toggle("all",!!allLog);lgE.scrollTop=hold?keep:lgE.scrollHeight;
  if(FLM()){const fl=ROOM.fl||{},all=Object.keys(fl).every(F=>fdone(fl[F]));
   $("#back").hidden=!(all&&R.admin===me)||!!R.t;ftctl();
-  $("#fst").hidden=false;$("#fst").textContent=all?(R.admin===me?"":R.t?"管理者が「次へ」を押すのを待っています…":"管理者がロビーに戻すのを待っています…"):rev?"ほかのフロアが終わるのを待っています(下のボタンで観戦できます)":""}
+  $("#fst").hidden=false;$("#fst").textContent=all?(R.admin===me?"":R.t?T("管理者が「次へ」を押すのを待っています…"):T("管理者がロビーに戻すのを待っています…")):rev?T("ほかのフロアが終わるのを待っています(下のボタンで観戦できます)"):""}
  else{$("#fst").hidden=true;$("#back").hidden=!(rev&&(R.admin===me||local))||!!R.t;tctl(rev,g)}
  {const e=$("#bs");e.hidden=local||!R.set.coin;
   if(!e.hidden){const bt=R.bets||{},c=k=>Object.values(bt).filter(x=>x.c===k).length,my=bt[me];
-   e.textContent=`🎲 ${blab(a)||PN(a)} ${c(a)}票 / ${blab(b)||PN(b)} ${c(b)}票 / 引き分け ${c("draw")}票`+(F?"":` ・あなた:`+(my?(my.c==="draw"?"引き分け":(blab(my.c)||PN(my.c))):"なし"))+` ・🪙${cn(name)}`}}
+   e.textContent=T("🎲 {a} {x}票 / {b} {y}票 / 引き分け {z}票",{a:blab(a)||PN(a),x:c(a),b:blab(b)||PN(b),y:c(b),z:c("draw")})+(F?"":T(" ・あなた:")+(my?(my.c==="draw"?T("引き分け"):(blab(my.c)||PN(my.c))):T("なし")))+` ・🪙${cn(name)}`}}
  if(!local&&R.set.coin&&(g.stage==="end"||g.stage==="reveal")&&g.res&&!g.hl&&me===wr(g,g.res==="draw"?a:g.res)){g.hl=1;put("g/hl",1);settle()}
  if(g.stage==="start"&&!stT&&(local||me===wr(g,a)))stT=setTimeout(()=>{stT=0;if(R.g?.stage==="start"){put("g/stage","play");turn(0)}},2000)}
 $("#al").onclick=()=>{allLog=!allLog;draw()};
@@ -562,10 +565,10 @@ $("#back").onclick=async()=>{if(local)return location.reload();if(FLM()){fpick={
 function ov(){const g=R.g||{},st=g.stage,b=g.order?.[1];let h="";
  if(R.phase==="play"&&g.multi)h=mOv(g);
  else if(R.phase==="play"){
-  if(st==="start")h=`<div class="big">${esc(PN(g.order[0]))}さん先攻！<br>${esc(PN(b))}さん後攻です！</div>`;
-  else if(st==="goal")h=`<div class="big">${esc(PN(g.who))}さんゴール！！</div>`;
-  else if(st==="sudden")h=`<div class="huge">サドンデス！！！</div><div class="sm">${esc(PN(b))}さん、ゴール出来なかったら負け！</div>`;
-  else if(st==="end")h=g.res==="draw"?`<div class="huge">引き分け！！</div>`:`<div class="big">${esc(PN(g.res))}さんの勝ち！！</div>`}
+  if(st==="start")h=`<div class="big">${T("{a}先攻！<br>{b}後攻です！",{a:SAN(esc(PN(g.order[0]))),b:SAN(esc(PN(b)))})}</div>`;
+  else if(st==="goal")h=`<div class="big">${T("{n}ゴール！！",{n:SAN(esc(PN(g.who)))})}</div>`;
+  else if(st==="sudden")h=`<div class="huge">${T("サドンデス！！！")}</div><div class="sm">${T("{n}、ゴール出来なかったら負け！",{n:SAN(esc(PN(b)))})}</div>`;
+  else if(st==="end")h=g.res==="draw"?`<div class="huge">${T("引き分け！！")}</div>`:`<div class="big">${T("{n}の勝ち！！",{n:SAN(esc(PN(g.res)))})}</div>`}
  $("#ov").innerHTML=h;$("#ov").hidden=!h;
  if(g.ev&&g.ev.id!==lastEv){lastEv=g.ev.id;if(g.ev.k){const f=$("#fx"),sp=$("#stamp"),s2=$("#stamp2"),ng=g.ev.k==="ng";f.textContent=g.ev.k==="ok"?"〇":"✕";f.className=g.ev.k;f.hidden=false;sp.hidden=!ng;s2.hidden=ng||(window.okc=(window.okc||0)+1)%3!==0;setTimeout(()=>{f.hidden=true;sp.hidden=true;s2.hidden=true},ng?1000:700)}}}
 $("#ov").onclick=()=>{const g=R.g,st=g?.stage,n={goal:g?.after,sudden:"play",end:"reveal"}[st];if(!n)return;
@@ -574,7 +577,7 @@ $("#ov").onclick=()=>{const g=R.g,st=g?.stage,n={goal:g?.after,sudden:"play",end
  if(st==="goal"&&n==="end"&&lg)psh("log",g.res==="draw"?"DRAW":PN(g.res)+":WIN");
  if(st==="end"&&lg)psh("log","REVEAL");
  if(st==="sudden"&&!g.sd){put("g/sd",1);turn(1,1)}put("g/stage",n)};
-function tnfx(){const g=R.g;if(g?.tn&&g.tn.id!==lastTn){lastTn=g.tn.id;const t=$("#tn");t.textContent=g.tn.m||PN(g.tn.u)+(g.tn.last?"さんのラストターン！！":"さんのターン！！");t.hidden=false;setTimeout(()=>t.hidden=true,1100)}}
+function tnfx(){const g=R.g;if(g?.tn&&g.tn.id!==lastTn){lastTn=g.tn.id;const t=$("#tn");t.textContent=g.tn.m?LT(g.tn.m):T(g.tn.last?"{n}のラストターン！！":"{n}のターン！！",{n:SAN(PN(g.tn.u))});t.hidden=false;setTimeout(()=>t.hidden=true,1100)}}
 
 /* ---- chat ---- */
 function chats(){const m=msgs(R.chat).slice(-30).map(x=>`<div><b>${esc(x.n)}</b> ${esc(x.t)}</div>`).join(""),can=R.phase==="lobby"||!isF(me);
@@ -597,6 +600,8 @@ function draw(){if(!R||!R.phase)return;const ph=R.phase;
 
 /* ---- 自動復帰 ---- */
 $("#nm").value=LS.get("lab_name")||"";
+/* 言語: index.html の文字を置きかえて、タイトル画面に「日本語 / English / 한국어」を出す(i18n.js) */
+applyStatic(document.body);langSwitch($("#title"),()=>{const v=$("#nm").value.trim().slice(0,10);if(v)LS.set("lab_name",v)});
 (async()=>{const rm=LS.get("lab_room");name=LS.get("lab_name")||"";if(!rm||!name)return;
  try{me??=await C.login();if((await get(ref(db,"rooms/"+rm))).exists())join(rm);else LS.del("lab_room")}catch(e){}})();
 $("#out").onclick=async()=>{LS.del("lab_room");try{if(rid)await set(ref(db,`rooms/${rid}/players/${me}`),null)}catch(e){}location.reload()};
