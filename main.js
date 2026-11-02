@@ -1,5 +1,5 @@
-import*as C from"./core.js?v=21";
-import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=21";
+import*as C from"./core.js?v=22";
+import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=22";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},ROOM={},VF="",fpick={},ffd={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
@@ -39,7 +39,11 @@ const slab=u=>{if(R.set?.mode==="floor"&&R.phase==="lobby"){for(const F of FL)fo
 const wr=(g,id)=>g.mem?.[id]?.[0]||id;
 const blab=id=>{const pl=R.phase==="play"&&R.g,mm=DBL()&&((pl&&pl.mem?.[id])||mem(id));return mm?`${id==="tA"?"A":"B"}(${mm.map(u=>SAN((pl&&pl.names?.[u])||P(u))).join(T("、"))})`:""};
 const msgs=o=>Object.entries(o||{}).sort((x,y)=>x[0]<y[0]?-1:1).map(e=>e[1]);
-const show=id=>["title","lobby","setup","bonus","tour","game"].forEach(s=>$("#"+s).hidden=s!==id);
+const show=id=>{["title","lobby","setup","bonus","tour","game"].forEach(s=>$("#"+s).hidden=s!==id);guardBack(id)};
+/* 戻るボタンの確認(backguard.js): 最初の画面は「ホームに戻りますか？」、待ちあいは「ルームから出ますか？」(はいで部屋を出る)、
+   ゲーム中(壁を置く・ボーナス・大会・迷路)は「ゲームをやめますか？」(CPU対戦は最初の画面へ、オンラインは部屋を出る) */
+function guardBack(id){if(!window.BackGuard)return;const out=()=>{const b=$("#out");if(b&&b.onclick)b.onclick();else location.reload()};
+ if(id==="title")BackGuard.set("home");else if(id==="lobby")BackGuard.set("room",out);else BackGuard.set("game",local?()=>location.reload():out)}
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const nameOk=()=>(name=$("#nm").value.trim().slice(0,10))?(LS.set("lab_name",name),1):(alert(T("なまえを入力してね")),0);
 for(let i=10;i<=20;i++)$("#wn").add(new Option(T("{n}枚",{n:i}),i));
