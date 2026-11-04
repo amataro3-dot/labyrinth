@@ -1,4 +1,4 @@
-body{margin:0 auto;max-width:480px;padding:12px;font:16px/1.5 sans-serif;background:#f7f7f2;color:#222;text-align:center}
+body{margin:0 auto;max-width:480px;padding:12px;box-sizing:border-box;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;font:16px/1.5 sans-serif;background:#f7f7f2;color:#222;text-align:center}
 section{display:flex;flex-direction:column;gap:8px}
 input,select,button{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;background:#fff}
 button{background:#2874a6;color:#fff;border:0}button:disabled{opacity:.4}
@@ -17,7 +17,11 @@ ul{list-style:none;padding:0}h3{margin:8px 0 2px}
 #fx.ok{color:#2e86de}#fx.ng{color:#e74c3c}
 [hidden]{display:none!important}
 h1{font-size:20px;margin:4px 0}
-#game svg{max-width:230px;display:block;margin:0 auto}
+/* 画面のたて(残りの高さ)に合わせて盤面を真ん中に置く(v=23) */
+body>section:not([hidden]){margin:auto 0}
+/* ゲーム中の盤面2枚: 画面の高さから他の部分(約240px)を引いた残りを2枚で分ける。チャット欄があるときはその分(約70px)小さく */
+#game svg{display:block;margin:0 auto;width:min(100%,max(200px,calc((100vh - 240px)/2)));width:min(100%,max(200px,calc((100dvh - 240px)/2)))}
+#game:has(>.chat:not([hidden])) svg{width:min(100%,max(200px,calc((100dvh - 310px)/2)))}
 #game h3{font-size:13px;margin:4px 0 0}
 #lg{font-size:12px;height:5.8em}
 #tn{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;background:#000a;z-index:10;pointer-events:none;text-align:center}
