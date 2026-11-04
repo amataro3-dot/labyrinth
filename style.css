@@ -16,22 +16,24 @@ ul{list-style:none;padding:0}h3{margin:8px 0 2px}
 #fx{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:40vw;font-weight:900;z-index:8;pointer-events:none}
 #fx.ok{color:#2e86de}#fx.ng{color:#e74c3c}
 [hidden]{display:none!important}
-h1{font-size:20px;margin:4px 0}
-/* 画面のたて(残りの高さ)に合わせて盤面を真ん中に置く(v=23) */
-body>section:not([hidden]){margin:auto 0}
-/* ゲーム中の盤面2枚: 画面の高さから他の部分(約240px)を引いた残りを2枚で分ける。チャット欄があるときはその分(約70px)小さく */
-#game svg{display:block;margin:0 auto;width:min(100%,max(200px,calc((100vh - 240px)/2)));width:min(100%,max(200px,calc((100dvh - 240px)/2)))}
-#game:has(>.chat:not([hidden])) svg{width:min(100%,max(200px,calc((100dvh - 310px)/2)))}
+h1{font-size:20px;font-weight:900;margin:auto 0 4px}
+/* タイトルと中身をひとかたまりにして、画面のたての真ん中に置く(タイトルは中身のすぐ上) */
+body>section:not([hidden]){margin:16px 0 auto}
+body>section#game{margin:0}
+/* ゲーム中の盤面2枚: 画面の高さから他の部分(タイトル・ログ3行・見出しなど、約210px)を引いた残りを2枚で分ける */
+#game svg{display:block;margin:0 auto;width:min(100%,max(200px,calc((100vh - 212px)/2)));width:min(100%,max(200px,calc((100dvh - 212px)/2)))}
+/* 対戦中(盤面2枚の画面)はタイトルをいちばん上に置く */
+body:has(#game:not([hidden]))>h1{margin:0 0 4px}
 #game h3{font-size:13px;margin:4px 0 0}
 #lg{font-size:12px;height:5.8em}
 #tn{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;background:#000a;z-index:10;pointer-events:none;text-align:center}
 #game .msgs{display:none}
-#lg{height:5.6em;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#lg{height:4.2em;line-height:1.4;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .lgrow{display:flex;gap:6px;align-items:flex-start}
 .lgrow #lg{flex:1;min-width:0}
 #al{padding:6px 8px;font-size:12px;white-space:nowrap}
 .cm{color:#8e44ad}
-#out{position:fixed;top:6px;right:6px;padding:4px 8px;font-size:12px;z-index:5}
+#out{position:fixed;bottom:6px;right:6px;padding:4px 8px;font-size:12px;z-index:5}
 #title:not([hidden])~#out{display:none}
 #stamp2{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(55vw,260px);z-index:12;pointer-events:none}
 #stamp{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(75vw,360px);z-index:12;pointer-events:none}
@@ -83,6 +85,12 @@ body>section:not([hidden]){margin:auto 0}
 #ftab{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:20;background:#fffe;padding:4px;border-radius:12px;box-shadow:0 2px 8px #0003}
 #ftab button{padding:6px 10px;font-size:14px;flex:0 0 auto}
 #ftab:not([hidden])~section{padding-bottom:56px}
+/* 対戦中(盤面2枚の画面)は、フロアの切りかえを下に固定せず、盤面の下に置く(下にスクロールすると出る) */
+body:has(#game:not([hidden])) #ftab{position:static;order:1;transform:none;margin:12px auto 40px;box-shadow:none;background:none}
+body:has(#game:not([hidden])) #ftab~section{padding-bottom:0}
+/* 対戦中は「ルームを出る」も盤面(とフロアの切りかえ)の下に置く(下にスクロールすると出る) */
+body:has(#game:not([hidden])) #out{position:static;order:2;align-self:center;margin:12px auto 24px}
+#game{min-height:calc(100vh - 58px);min-height:calc(100dvh - 58px);justify-content:center;box-sizing:border-box}
 #fst{font-size:14px;font-weight:700;margin:4px 0}
 #tfl{display:flex;flex-direction:column;gap:4px}
 #tfl .row{flex-wrap:wrap}

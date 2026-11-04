@@ -1,5 +1,5 @@
-import*as C from"./core.js?v=23";
-import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=23";
+import*as C from"./core.js?v=24";
+import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=24";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},ROOM={},VF="",fpick={},ffd={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
