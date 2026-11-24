@@ -1,5 +1,5 @@
-import*as C from"./core.js?v=24";
-import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=24";
+import*as C from"./core.js?v=25";
+import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=25";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},ROOM={},VF="",fpick={},ffd={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
@@ -78,7 +78,7 @@ $("#cp").onclick=()=>{if(!nameOk())return;me="me";local=1;lvl=+$("#lv").value;co
 async function join(id){const cs=(await get(ref(db,`rooms/${id}/set/coin`))).val();
  if(cs){const ps=(await get(ref(db,`rooms/${id}/players`))).val()||{};if(Object.entries(ps).some(([u,p])=>u!==me&&ck(p.name)===ck(name)))return alert(T("その名前は使われています。べつの名前にしてね"))}
  rid=id;const pr=ref(db,`rooms/${id}/players/${me}`);
- await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;LS.set("lab_room",id);
+ await set(pr,{name,t:Date.now()});onDisconnect(pr).remove();lastEv=-1;LS.set("lab_room",id);LS.set("lab_last",id);
  await new Promise(r=>{onValue(ref(db,".info/serverTimeOffset"),s=>{so=s.val()||0;r()},{onlyOnce:true});setTimeout(r,2000)});
  if(cs){const cr=ref(db,`rooms/${id}/coins/${ck(name)}`),c=(await get(cr)).val();
   if(!c||c.n===undefined||(c.off&&Date.now()+so-c.off>300000))await set(cr,{n:5});else if(c.off)await set(ref(db,`rooms/${id}/coins/${ck(name)}/off`),null)}
@@ -606,6 +606,8 @@ function draw(){if(!R||!R.phase)return;const ph=R.phase;
 $("#nm").value=LS.get("lab_name")||"";
 /* 言語: index.html の文字を置きかえて、タイトル画面に「日本語 / English / 한국어」を出す(i18n.js) */
 applyStatic(document.body);langSwitch($("#title"),()=>{const v=$("#nm").value.trim().slice(0,10);if(v)LS.set("lab_name",v)});
+/* 前に入ったルームの番号を入力欄に残す(「ルームを出る」で出たあとも。間違えて出たときにすぐ入り直せる) */
+$("#rid").value=LS.get("lab_last")||"";
 (async()=>{const rm=LS.get("lab_room");name=LS.get("lab_name")||"";if(!rm||!name)return;
  try{me??=await C.login();if((await get(ref(db,"rooms/"+rm))).exists())join(rm);else LS.del("lab_room")}catch(e){}})();
 $("#out").onclick=async()=>{LS.del("lab_room");try{if(rid)await set(ref(db,`rooms/${rid}/players/${me}`),null)}catch(e){}location.reload()};
