@@ -1,5 +1,5 @@
-import*as C from"./core.js?v=25";
-import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=25";
+import*as C from"./core.js?v=26";
+import{T,SAN,LT,LANG,langSwitch,applyStatic}from"./i18n.js?v=26";
 const{db,ref,set,push,get,onValue,runTransaction,onDisconnect,serverTimestamp,N,cl,wk,nb,reach,cpuBoard,cpuMove}=C;
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let me,name,rid,R={},ROOM={},VF="",fpick={},ffd={},local=0,lvl=2,lastEv=0,lastTn=0,stT=0,cpuT=0,busy=0,go=0,lastPh="",tool="S",E={S:"",G:"",W:[]},allLog=0,lgHold=0,lgTouch=0,betView=0,cdReg=0,so=0,go2=0,DS="",dwr={};
@@ -86,11 +86,13 @@ async function join(id){const cs=(await get(ref(db,`rooms/${id}/set/coin`))).val
  onValue(ref(db,"rooms/"+id),s=>{ROOM=s.val();if(!ROOM){LS.del("lab_room");alert(T("ルームが閉じられました"));return location.reload()}rebuild();watch();draw()})}
 
 /* ---- housekeeping (admin交代・離脱処理) ---- */
+/* 接続が切れた人を待つ時間: 60秒(全ゲーム共通のルール。2026-11-25) */
+const GONE_WAIT=60000;
 const gone={};let wt=0;
 function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-pl[b].t),s=R.slots||{},now=Date.now();let wait=0;
  if(lastEv===-1){lastEv=R.g?.ev?.id||0;lastTn=R.g?.tn?.id||0}
  if(!pl[me]){const pr=ref(db,`rooms/${rid}/players/${me}`);set(pr,{name,t:now});onDisconnect(pr).remove()}
- const miss=u=>{if(pl[u]){delete gone[u];return 0}gone[u]??=now;if(now-gone[u]<10000){wait=1;return 0}return 1};
+ const miss=u=>{if(pl[u]){delete gone[u];return 0}gone[u]??=now;if(now-gone[u]<GONE_WAIT){wait=1;return 0}return 1};
  if(miss(R.admin)&&ids[0]===me)put("admin",me);
  if(FLM())fwatch(miss,pl);
  else if(R.set?.mode==="floor"){if(R.phase==="lobby"&&(R.admin===me||(!pl[R.admin]&&ids[0]===me)))for(const F in R.fs||{})for(const k in R.fs[F]||{})if(miss(R.fs[F][k]))rput(`fs/${F}/${k}`,null)}
@@ -99,7 +101,7 @@ function watch(){const pl=R.players||{},ids=Object.keys(pl).sort((a,b)=>pl[a].t-
   else if(o===me&&!["end","reveal"].includes(R.g?.stage)){put("slots/"+k,null);
    if(R.phase==="setup"||R.phase==="bonus"){if(R.t?.st==="match"){R.t.k==="tour"?tafter(me):tforf(s[k])}else{put("phase","lobby");alert(T("相手が退出しました"))}}
    else{const mt=tOf(me);psh("log",PN(mt)+":WIN(FORFEIT)");put("g/res",mt);put("g/stage","end")}}}
- if(wait&&!wt)wt=setTimeout(()=>{wt=0;watch()},10200)}
+ if(wait&&!wt)wt=setTimeout(()=>{wt=0;watch()},GONE_WAIT+200)}
 /* フロアで抜けた人: 相手側の人が不戦勝にする。全員いなくなったフロアは管理者が引き分けで閉じる */
 function fsyn(F,res){const f=ROOM.fl[F],s=f.slots||{},nm=u=>ROOM.players?.[u]?.name||f.nm?.[u]||"?",names={};let order,mem;
  if(f.mode==="double"){order=["tA","tB"];mem={tA:[s.a,s.a2],tB:[s.b,s.b2]};for(const t of order){names[t]=mem[t].map(nm).join("&");mem[t].forEach(u=>names[u]=nm(u))}}
