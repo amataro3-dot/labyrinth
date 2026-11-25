@@ -50,7 +50,7 @@ export function applyStatic(root) {
   const nodes = []; while (tw.nextNode()) nodes.push(tw.currentNode);
   nodes.forEach(n => { const k = n.nodeValue.trim(); if (k && I18N[k]) n.nodeValue = n.nodeValue.replace(k, T(k)); });
   root.querySelectorAll("[placeholder]").forEach(e => { const k = e.getAttribute("placeholder"); if (I18N[k]) e.setAttribute("placeholder", T(k)); });
-  root.querySelectorAll("a[href^='/']").forEach(a => { const h = a.getAttribute("href"); if (h === "/" || h === "/privacy.html") a.setAttribute("href", sitePath(h)); });
+  root.querySelectorAll("a[href^='/']").forEach(a => { const h = a.getAttribute("href"); if (h === "/" || h.endsWith(".html")) a.setAttribute("href", sitePath(h)); });
   // 「だめ!!」「いいね!」のスタンプ(写真に日本語の手書き)の下に、訳した文字を出す(style.css の .cap)
   [["stamp", "だめ!!"], ["stamp2", "いいね!"]].forEach(([id, k]) => {
     const img = document.getElementById(id); if (!img) return;
@@ -83,6 +83,10 @@ const I18N = {
   "コンピューター戦": ["vs. Computer", "컴퓨터 대전"],
   "Muddy's Games トップ": ["Muddy's Games home", "Muddy's Games 홈"],
   "プライバシーポリシー": ["Privacy policy", "개인정보 처리방침"],
+  /* 最初の画面の説明(2026-11-25。AdSense 審査のため) */
+  "Labyrinth .VS とは": ["What is Labyrinth .VS?", "Labyrinth .VS란?"],
+  "見えない壁をしかけた6×6の迷路で対戦する頭脳戦です。ぶつかった壁を覚えて、相手の迷路の作り方を読み、先にゴールしたほうの勝ち。2〜8人で遊べるほか、コンピューター戦でひとりでもルールを覚えられます。": ["A battle of wits in a 6×6 maze with hidden walls. Remember the walls you bump into, read how your opponent built their maze, and be the first to reach the goal. Play with 2–8 people, or learn the rules on your own against the computer.", "보이지 않는 벽을 설치한 6×6 미로에서 겨루는 두뇌 게임입니다. 부딪힌 벽을 기억하고 상대가 미로를 만든 방식을 읽어, 먼저 골인하는 쪽이 이깁니다. 2~8명이 함께 즐길 수 있고, 컴퓨터 대전으로 혼자서도 규칙을 익힐 수 있습니다."],
+  "📖 遊び方を見る →": ["📖 How to play →", "📖 게임 방법 보기 →"],
   "ルームID：": ["Room ID: ", "방 ID: "],
   "対戦する": ["Play", "대전하기"],
   "対戦をやめる": ["Stop playing", "대전 그만하기"],

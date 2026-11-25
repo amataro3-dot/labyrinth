@@ -103,3 +103,5 @@ body:has(#game:not([hidden])) #out{position:static;order:2;align-self:center;mar
 #stamp:not([hidden])+.cap,#stamp2:not([hidden])+.cap{display:block}
 html:not([lang=ja]) .huge{white-space:normal;font-size:min(40px,9vw);text-align:center}
 html:not([lang=ja]) .big{font-size:28px;text-align:center}
+/* 最初の画面の説明(2026-11-25) */
+.about{margin-top:14px;text-align:left;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 1px 4px #0002}.about h2{font-size:16px;margin:0 0 4px}.about p{margin:4px 0;font-size:14px;line-height:1.7;color:#444}.about a{color:#2874a6}
